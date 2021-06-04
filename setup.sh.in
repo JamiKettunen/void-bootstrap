@@ -1,0 +1,202 @@
+#!/usr/bin/env bash
+# This script is meant to be ran inside the new Void Linux installation.
+#set -x # Debug
+
+# Constants
+############
+COLOR_GREEN="@COLOR_GREEN@"
+COLOR_BLUE="@COLOR_BLUE@"
+COLOR_RED="@COLOR_RED@"
+COLOR_RESET="@COLOR_RESET@"
+DEF_MIRROR="@DEF_MIRROR@"
+MIRROR="@MIRROR@"
+RM_PKGS="@RM_PKGS@"
+RM_FILES="@RM_FILES@"
+BASE_PKGS="@BASE_PKGS@"
+EXTRA_PKGS="@EXTRA_PKGS@"
+ENABLE_SV="@ENABLE_SV@"
+DISABLE_SV="@DISABLE_SV@"
+HOSTNAME="@HOSTNAME@"
+USERS_PW_DEFAULT='@USERS_PW_DEFAULT@'
+USERS_PW_ENCRYPTION="@USERS_PW_ENCRYPTION@"
+USERS_GROUPS_COMMON="@USERS_GROUPS_COMMON@"
+USERS_SHELL_DEFAULT="@USERS_SHELL_DEFAULT@"
+USERS_SUDO_ASKPASS=@USERS_SUDO_ASKPASS@
+PERMIT_ROOT_LOGIN=@PERMIT_ROOT_LOGIN@
+
+# Runtime vars
+###############
+arch="$(xbps-uhelper arch)" # e.g. "aarch64-musl"
+
+# Functions
+############
+error() { echo -e "${COLOR_RED}ERROR: $1${COLOR_RESET}" 1>&2; exit 1; }
+log() { echo -e "${COLOR_GREEN}(rootfs) ${COLOR_BLUE}>>${COLOR_RESET} $1"; }
+enable_sv() { for sv in $@; do ln -s /etc/sv/$sv /etc/runit/runsvdir/default/; done; }
+disable_sv() { for sv in $@; do touch /etc/sv/$sv/down; done; }
+#runas() { sudo -u $1 -i bash -c "$2"; }
+cmd_exists() { command -v $1 >/dev/null; }
+mirror_setup() {
+	[ "$MIRROR" = "$DEF_MIRROR" ] && return
+	log "Switching default package mirror to '$MIRROR'..."
+	cp /usr/share/xbps.d/*-repository-*.conf /etc/xbps.d/
+	sed -i "s|$DEF_MIRROR|$MIRROR|g" /etc/xbps.d/*-repository-*.conf
+}
+base_setup() {
+	if [[ "$arch" != *"-musl" ]]; then
+		log "Generating default locales for glibc..."
+		xbps-reconfigure -f glibc-locales
+	fi
+
+	log "Upgrading xbps..."
+	xbps-install -Su xbps -y
+
+	if [ "$RM_PKGS" ]; then
+		log "Removing some unneeded packages..."
+		xbps-remove -y $RM_PKGS
+	fi
+	if [ "$RM_FILES" ]; then
+		log "Removing some unneeded files..."
+		rm -f $RM_FILES
+	fi
+
+	#log "Making sure all packages are configured..."
+	#xbps-reconfigure -fa
+
+	log "Upgrading all base packages..."
+	xbps-install -u -y
+
+	log "Finishing base system setup..."
+	xbps-install base-system -y
+	xbps-remove -y base-voidstrap
+
+	if [ "$BASE_PKGS" ]; then
+		log "Installing additional base packages..."
+		xbps-install -y $BASE_PKGS
+	fi
+}
+stage1_setup() {
+	# TODO: Do we need to "xbps-reconfigure -f glibc-locales" here already on glibc?
+	mirror_setup
+	base_setup
+	# TODO: /etc/localtime (timezone...)
+	# TODO: tty_keymap...
+	# TODO: tty_font...
+}
+install_extra_pkgs() {
+	[[ "$EXTRA_PKGS" && -e /packages ]] || return
+
+	log "Installing built extra packages $EXTRA_PKGS..."
+	# NOTE: There can be multiple subdirs depending on void-packages branch!
+	local pkg_dir="$(dirname $(find /packages -name "*.xbps" | head -1))"
+	xbps-rindex -a $pkg_dir/*.xbps # TODO: remove this line?
+	xbps-install --repository=$pkg_dir -y $EXTRA_PKGS \
+		|| error "Failed to install extra packages!"
+}
+sv_setup() {
+	if [ "$ENABLE_SV" ]; then
+		log "Enabling runit services $ENABLE_SV..."
+		enable_sv $ENABLE_SV
+	fi
+
+	if [ "$DISABLE_SV" ]; then
+		log "Disabling runit services $DISABLE_SV..."
+		disable_sv $DISABLE_SV
+	fi
+
+	if [ -e /etc/sv/socklog-unix ]; then
+		log "Enabling socklog services..."
+		enable_sv socklog-unix nanoklogd
+	fi
+}
+user_setup() {
+	log "Performing user setup..."
+	local pw_conf=""
+	while IFS="" read line; do
+		local fields=() user="" pw="$USERS_PW_DEFAULT" groups="$USERS_GROUPS_COMMON" shell="$USERS_SHELL_DEFAULT"
+		IFS=':' read -ra fields <<< "$line"
+		user="${fields[0]}"
+		[ "${fields[1]}" ] && pw="${fields[1]}"
+		[ "$pw" ] && pw_conf+="$user:$pw\n"
+
+		[ "${fields[3]}" ] && shell="${fields[3]}"
+		if [ "$user" = "root" ]; then
+			[ -z "$pw" ] && passwd -d root
+			[[ "$shell" && "$shell" != "/bin/sh" ]] && chsh -s $shell
+			continue
+		fi
+		if [ "${fields[2]}" ]; then
+			[ "$groups" ] && groups+=",${fields[2]}" || groups="${fields[2]}"
+		fi
+
+		local args=()
+		[ "$shell" ] && args+=(-s $shell)
+		[ "$groups" ] && args+=(-G $groups)
+		useradd -m ${args[@]} $user
+	done <<< "$(</users.conf)"
+	shred -uz /users.conf
+
+	[ "$pw_conf" ] || return
+	local args=()
+	[ "$USERS_PW_ENCRYPTION" ] && args+=(-c $USERS_PW_ENCRYPTION) || args+=(-e)
+	printf "${pw_conf::-2}" | chpasswd ${args[@]}
+
+	local nopasswd=""
+	$USERS_SUDO_ASKPASS || nopasswd=" NOPASSWD:"
+	echo "%wheel ALL=(ALL)${nopasswd} ALL" > /etc/sudoers.d/wheel-group-members
+
+	# declare -A user_groups
+	# user_groups=( ["user1"]="group1,group2,group3" ["user2"]="g1,g2")
+	# for user in "${!user_groups[@]}"; do echo "$user: ${user_groups[$user]}"; done
+	# user2_groups=(${users_common_groups[@]} $(echo "${user_groups[user2]}"))
+	# printf "user2:bruh:group1,g2,g3\nuser2:bruh2:g1,g2,g3" | awk -F':' '{printf "%s:%s\n", $1, $2}'
+}
+stage2_setup() {
+	install_extra_pkgs
+	sv_setup
+	user_setup
+
+	if $PERMIT_ROOT_LOGIN; then
+		log "Allowing login as root via SSH..."
+		sed 's/^#PermitRootLogin.*/PermitRootLogin yes/' -i /etc/ssh/sshd_config
+	fi
+
+	if [ "$HOSTNAME" ]; then
+		log "Setting system hostname to $HOSTNAME..."
+		echo "$HOSTNAME" > /etc/hostname
+	fi
+
+	log "Setting /root permissions to 700 (from 750)..."
+	chmod 700 /root
+
+	local custom_script="/mkrootfs.custom.sh"
+	if [ -e "$custom_script" ]; then
+		log "Running $custom_script..."
+		. "$custom_script"
+		rm "$custom_script"
+	fi
+
+	log "Removing installed orphan packages..."
+	xbps-remove -o -y
+
+	if [ ! -e /pkgcache ]; then
+		local cache_size="$(du -sh /var/cache/xbps | awk '{print $1}')"
+		log "Cleaning $cache_size of cached packages..."
+		rm /var/cache/xbps/*
+	fi
+
+	if cmd_exists updatedb; then
+		log "Updating mlocate database..."
+		sudo updatedb
+	fi
+
+	if cmd_exists fake-hwclock; then
+		log "Saving current time for fake-hwclock to restore on initial boot..."
+		fake-hwclock save "\$(date +'%Y-%m-%d %H:%M:%S')"
+	fi
+}
+
+# Script
+#########
+stage="$1"
+[ "$stage" ] && ${stage}_setup

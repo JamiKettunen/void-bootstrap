@@ -1,0 +1,19 @@
+# downloaded rootfs tarballs
+tarballs
+
+# rootfs images (.img*)
+images
+
+# xbps package cache
+pkgcache
+
+# local void-packages clone(s)
+void-packages*
+
+# static xbps install
+xbps-static
+
+# all hidden files except .gitignore
+.*
+!.gitignore
+
