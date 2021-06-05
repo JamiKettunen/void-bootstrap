@@ -199,7 +199,6 @@ prepare_bootstrap() {
 		rootfs_echo "${mkrootfs_conf::-2}" /etc/xbps.d/mkrootfs.conf
 	fi
 
-	[ $user_count -gt 0 ] && base_pkgs+=(sudo) # TODO: Check if sudo is pre-installed
 	printf '%s\n' "${users[@]}" | grep -q ^root || users+=(root)
 	local users_conf=""
 	for user in "${users[@]}"; do
