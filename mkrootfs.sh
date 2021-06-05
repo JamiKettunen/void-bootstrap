@@ -109,13 +109,14 @@ else
 fi
 echo "  work:     $work_dir
   config:   $config
+
+Extra packages:
 "
-
-	echo "Extra packages:
-
-  build:    $build_extra_pkgs"
 if [ ${#extra_install_pkgs[@]} -gt 0 ]; then
-	echo "  install:  $(fold_offset 12 "${extra_install_pkgs[@]}")"
+	echo "  build:    $build_extra_pkgs
+  install:  $(fold_offset 12 "${extra_install_pkgs[@]}")"
+else
+	echo "  build: $build_extra_pkgs"
 fi
 echo
 
