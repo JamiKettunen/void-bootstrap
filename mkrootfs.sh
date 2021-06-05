@@ -61,9 +61,10 @@ config_prep() {
 	[ "$mirror" ] || mirror="$DEF_MIRROR"
 	[ "$img_compress" ] || img_compress="none"
 	user_count=$(printf '%s\n' "${users[@]}" | grep -v ^root | wc -l)
+	[[ $((${#extra_build_pkgs[@]}+${#extra_install_pkgs[@]})) -gt 0 ]] || build_extra_pkgs=false
 }
 check_deps() {
-	runtime_deps=(systemd-nspawn qemu-$qemu_arch-static curl mkfs.ext4 rsync $sudo)
+	runtime_deps=(systemd-nspawn qemu-$qemu_arch-static curl mkfs.ext4 $sudo)
 	[ ${#extra_build_pkgs[@]} -gt 0 ] && runtime_deps+=(git)
 	for dep in ${runtime_deps[@]}; do
 		cmd_exists $dep || missing_deps+=($dep)
@@ -363,13 +364,18 @@ extra_pkgs_setup() {
 		$build_extra_pkgs && build_packages
 	fi
 
-	if [ ${#extra_install_pkgs[@]} -gt 0 ]; then
-		$sudo mkdir "$rootfs_dir"/packages
-		$sudo mount --bind void-packages/hostdir/binpkgs "$rootfs_dir"/packages
+	if [ "$extra_install_pkgs" ]; then
+		local binpkgs="void-packages/hostdir/binpkgs"
+		if [ -e $binpkgs ]; then
+			$sudo mkdir "$rootfs_dir"/packages
+			$sudo mount --bind $binpkgs "$rootfs_dir"/packages
+		else
+			warn "'$binpkgs' doesn't exist; please configure your extra_build_pkgs array!"
+		fi
 	fi
 }
 apply_overlays() {
-	[ ${#overlays[@]} -gt 0 ] || return
+	[ ${#overlays[@]} -gt 0 ] || return 0
 
 	log "Applying ${#overlays[@]} enabled overlay(s)..."
 	local overlay="$base_dir/overlay"
@@ -432,13 +438,14 @@ create_image() {
 	[ -e images ] || mkdir -p images
 	rootfs_img="images/${rootfs_match,,}${img_name_extra}-$(date +'%Y-%m-%d').img" # e.g. "aarch64-musl-rootfs-2021-05-24.img"
 	# TODO: F2FS / XFS filesystem support
+	mount | grep -q "$base_dir/tmpmnt" && $sudo umount tmpmnt
 	fallocate -l $img_size "$rootfs_img"
 	mkfs.ext4 -m 1 -F "$rootfs_img" #&> /dev/null
 	mkdir -p tmpmnt
 	$sudo mount "$rootfs_img" tmpmnt
 
 	log "Moving Void Linux installation to $rootfs_img..."
-	$sudo rsync --remove-source-files -aAXH "$rootfs_dir"/* tmpmnt/
+	$sudo mv "$rootfs_dir"/* tmpmnt/
 	$sudo umount tmpmnt
 	$sudo rmdir tmpmnt
 	umount_rootfs
