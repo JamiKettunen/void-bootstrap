@@ -119,6 +119,3 @@ XBPS_ALLOW_RESTRICTED="yes"
 XBPS_CCACHE="yes"
 XBPS_MAKEJOBS="$(nproc)" # e.g. "16" / "$(nproc)"
 # TODO: distcc config
-
-# Potential local config overrides
-[ -e config.custom.sh ] && . config.custom.sh || :

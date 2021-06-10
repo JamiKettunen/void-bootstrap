@@ -13,7 +13,7 @@ COLOR_RESET="\e[0m"
 
 # Runtime vars
 ###############
-config="config.sh"
+config="config.custom.sh"
 base_dir="$(readlink -f "$(dirname "$0")")"
 host_arch="$(uname -m)" # e.g. "x86_64"
 qemu_arch="" # e.g. "aarch64" / "arm"
@@ -49,8 +49,8 @@ parse_args() {
 }
 config_prep() {
 	[ $EUID -eq 0 ] && unset sudo
-	[ -e "$config" ] || error "Config file '$config' doesn't exist!"
-	. "$config"
+	. config.sh
+	[ -r "$config" ] && . "$config" || config="config.sh"
 	[[ "$arch" = "aarch64" || "$arch" = "armv7" ]] || error "Target architecture '$arch' is invalid!"
 	qemu_arch="$arch"
 	[[ "$arch" = "armv"* ]] && qemu_arch="arm"
