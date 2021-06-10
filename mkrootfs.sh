@@ -64,7 +64,7 @@ config_prep() {
 	[[ $((${#extra_build_pkgs[@]}+${#extra_install_pkgs[@]})) -gt 0 ]] || build_extra_pkgs=false
 }
 check_deps() {
-	runtime_deps=(systemd-nspawn qemu-$qemu_arch-static curl mkfs.ext4 $sudo)
+	runtime_deps=(systemd-nspawn qemu-$qemu_arch-static wget mkfs.ext4 $sudo)
 	[ ${#extra_build_pkgs[@]} -gt 0 ] && runtime_deps+=(git)
 	for dep in ${runtime_deps[@]}; do
 		cmd_exists $dep || missing_deps+=($dep)
@@ -133,7 +133,7 @@ fetch_rootfs() {
 	else
 		rootfs_match="$arch-ROOTFS" # glibc
 	fi
-	rootfs_tarball="$(curl -s "$mirror/live/current/" | grep $rootfs_match | cut -d'"' -f2)"
+	rootfs_tarball="$(wget "$mirror/live/current/" -t 3 -qO - | grep $rootfs_match | cut -d'"' -f2)"
 	log "Latest tarball: $rootfs_tarball"
 	[ "$rootfs_tarball" ] || die "Please check your arch ($arch) and mirror ($mirror)!"
 	local tarball_url="$mirror/live/current/$rootfs_tarball"
@@ -141,11 +141,11 @@ fetch_rootfs() {
 
 	log "Downloading rootfs tarball..."
 	mkdir -p "$tarball_dir"
-	curl -L "$tarball_url" -o "$tarball_dir/$rootfs_tarball"
+	wget "$tarball_url" -t 3 --show-progress -qO "$tarball_dir/$rootfs_tarball"
 
 	log "Verifying tarball SHA256 checksum..."
 	local checksum="$(sha256sum "$tarball_dir/$rootfs_tarball" | awk '{print $1}')"
-	curl -s "$mirror/live/current/sha256sum.txt" | grep -q "$rootfs_tarball.*$checksum\$" && return
+	wget "$mirror/live/current/sha256sum.txt" -t 3 -qO - | grep -q "$rootfs_tarball.*$checksum\$" && return
 
 	rm "$tarball_dir/$rootfs_tarball"
 	die "Rootfs tarball checksum verification failed; please try again!"
@@ -248,7 +248,7 @@ setup_xbps_static() {
 	cmd_exists xbps-uhelper && return
 	[ -e xbps-static ] || mkdir xbps-static
 
-	local checksums="$(curl -s "$mirror/static/sha256sums.txt")" checksum=""
+	local checksums="$(wget "$mirror/static/sha256sums.txt" -t 3 -qO -)" checksum=""
 	local xbps_tarball="xbps-static-latest.${host_arch}-musl.tar.xz"
 	local fetch=true
 
@@ -260,7 +260,7 @@ setup_xbps_static() {
 
 	if $fetch; then
 		log "Fetching latest static xbps binaries for $host_arch..."
-		curl -L "$mirror/static/$xbps_tarball" -o "$tarball_dir/$xbps_tarball"
+		wget "$mirror/static/$xbps_tarball" -t 3 --show-progress -qO "$tarball_dir/$xbps_tarball"
 		checksum="$(sha256sum "$tarball_dir/$xbps_tarball" | awk '{print $1}')"
 		if ! echo "$checksums" | grep -q "$checksum.*$xbps_tarball\$"; then
 			rm "$tarball_dir/$xbps_tarball"
@@ -418,8 +418,8 @@ finalize_setup() {
 			setup_xbps_static
 			log "Cleaning old version copies of cached packages..."
 			[ -e "$pkgcache_dir"/prune.py ] \
-				|| curl -s https://raw.githubusercontent.com/JamiKettunen/xbps-cache-prune/master/xbps-cache-prune.py \
-				-o "$pkgcache_dir"/prune.py
+				|| wget https://raw.githubusercontent.com/JamiKettunen/xbps-cache-prune/master/xbps-cache-prune.py \
+					-t 3 --show-progress -qO "$pkgcache_dir"/prune.py
 			# -d false
 			python3 "$pkgcache_dir"/prune.py -c "$pkgcache_dir" -n 3 || :
 		else
