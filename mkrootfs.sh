@@ -27,6 +27,7 @@ build_extra_pkgs=true
 missing_deps=()
 user_count=0
 sudo="sudo" # unset if running as root
+usernames=()
 
 # Functions
 ############
@@ -74,6 +75,7 @@ config_prep() {
 	[ "$mirror" ] || mirror="$DEF_MIRROR"
 	[ "$img_compress" ] || img_compress="none"
 	user_count=$(printf '%s\n' "${users[@]}" | grep -v ^root | wc -l)
+	printf '%s\n' "${users[@]}" | grep -q ^root || users+=(root)
 	[[ $((${#extra_build_pkgs[@]}+${#extra_install_pkgs[@]})) -gt 0 ]] || build_extra_pkgs=false
 	. xbps-env.sh
 }
@@ -219,9 +221,11 @@ prepare_bootstrap() {
 		rootfs_echo "${mkrootfs_conf::-2}" /etc/xbps.d/mkrootfs.conf
 	fi
 
-	printf '%s\n' "${users[@]}" | grep -q ^root || users+=(root)
 	local users_conf=""
 	for user in "${users[@]}"; do
+		local fields=()
+		IFS=':' read -ra fields <<< "$user"
+		usernames+=(${fields[0]})
 		users_conf+="$user\n"
 	done
 	log "Writing /users.conf under $rootfs_dir..."
