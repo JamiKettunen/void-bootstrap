@@ -1,5 +1,10 @@
 # Config file for Void Bootstrap's mkrootfs.py
 
+# Void Linux release tarballs to target
+# e.g. "current" or "20210316"
+# https://alpha.de.repo.voidlinux.org/live
+release="20210316"
+
 # Target rootfs architecture; currently available choices include:
 # "aarch64"
 # "armv6l"

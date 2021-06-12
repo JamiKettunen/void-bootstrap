@@ -18,6 +18,8 @@ config="config.custom.sh"
 base_dir="$(readlink -f "$(dirname "$0")")"
 host_arch="$(uname -m)" # e.g. "x86_64"
 qemu_arch="" # e.g. "aarch64" / "arm"
+musl_suffix="" # e.g. "-musl"
+rootfs_match="" # e.g. "aarch64-musl-ROOTFS"
 rootfs_dir="" # e.g. "/tmp/void-bootstrap/rootfs"
 rootfs_tarball="" # e.g. "void-aarch64-musl-ROOTFS-20210218.tar.xz"
 tarball_dir="$base_dir/tarballs"
@@ -63,6 +65,8 @@ config_prep() {
 			*) qemu_arch="$arch" ;;
 		esac
 	fi
+	$musl && musl_suffix="-musl"
+	rootfs_match="$arch$musl_suffix-ROOTFS" # musl/glibc
 	[ "$work_dir" ] || work_dir="."
 	work_dir="$(readlink -f "$work_dir")"
 	rootfs_dir="$work_dir/rootfs"
@@ -106,6 +110,7 @@ print_config() {
 
   host:     $host_arch
   arch:     $arch
+  release:  $release
   musl:     $musl
   mirror:   $mirror
   users:    $user_count
@@ -141,15 +146,10 @@ echo
 "
 }
 fetch_rootfs() {
-	if $musl; then
-		rootfs_match="$arch-musl-ROOTFS" # musl
-	else
-		rootfs_match="$arch-ROOTFS" # glibc
-	fi
-	rootfs_tarball="$(wget "$mirror/live/current/" -t 3 -qO - | grep $rootfs_match | cut -d'"' -f2)"
+	rootfs_tarball="$(wget "$mirror/live/$release/" -t 3 -qO - | grep $rootfs_match | cut -d'"' -f2)"
 	log "Latest tarball: $rootfs_tarball"
 	[ "$rootfs_tarball" ] || die "Please check your arch ($arch) and mirror ($mirror)!"
-	local tarball_url="$mirror/live/current/$rootfs_tarball"
+	local tarball_url="$mirror/live/$release/$rootfs_tarball"
 	[ -e "$tarball_dir/$rootfs_tarball" ] && return
 
 	log "Downloading rootfs tarball..."
@@ -157,8 +157,13 @@ fetch_rootfs() {
 	wget "$tarball_url" -t 3 --show-progress -qO "$tarball_dir/$rootfs_tarball"
 
 	log "Verifying tarball SHA256 checksum..."
+	local filenames=() checksums=""
+	for file in sha256sums sha256sum sha256; do
+		checksums="$(wget "$mirror/live/$release/$file.txt" -t 3 -qO - || :)"
+		[ "$checksums" ] && break
+	done
 	local checksum="$(sha256sum "$tarball_dir/$rootfs_tarball" | awk '{print $1}')"
-	wget "$mirror/live/current/sha256sum.txt" -t 3 -qO - | grep -q "$rootfs_tarball.*$checksum\$" && return
+	echo "$checksums" | grep -q "$rootfs_tarball.*$checksum\$" && return
 
 	rm "$tarball_dir/$rootfs_tarball"
 	die "Rootfs tarball checksum verification failed; please try again!"
