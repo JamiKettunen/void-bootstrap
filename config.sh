@@ -5,6 +5,11 @@
 # https://alpha.de.repo.voidlinux.org/live
 release="20210316"
 
+# Backend to use for executing scripts and commands on the rootfs; supported choices include:
+# "chroot"
+# "systemd-nspawn"
+backend="chroot"
+
 # Target rootfs architecture; currently available choices include:
 # "aarch64"
 # "armv6l"

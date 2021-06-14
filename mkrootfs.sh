@@ -5,6 +5,7 @@ set -e
 # Constants
 ############
 SUPPORTED_ARCHES=(aarch64 armv6l armv7l x86_64 i686)
+SPECIAL_MOUNTS=(sys dev proc)
 DEF_MIRROR="https://alpha.de.repo.voidlinux.org"
 COLOR_GREEN="\e[32m"
 COLOR_BLUE="\e[36m"
@@ -23,6 +24,7 @@ rootfs_match="" # e.g. "aarch64-musl-ROOTFS"
 rootfs_dir="" # e.g. "/tmp/void-bootstrap/rootfs"
 rootfs_tarball="" # e.g. "void-aarch64-musl-ROOTFS-20210218.tar.xz"
 tarball_dir="$base_dir/tarballs"
+chroot="" # e.g. "chroot" or "systemd-nspawn -q -D"
 build_extra_pkgs=true
 missing_deps=()
 user_count=0
@@ -36,9 +38,11 @@ usage() { die "usage: $0 [-c alternate_config.sh] [-B] [-N]"; }
 error() { die "${COLOR_RED}ERROR: $1${COLOR_RESET}"; }
 log() { echo -e "${COLOR_BLUE}>>${COLOR_RESET} $1"; }
 warn() { echo -e "${COLOR_YELLOW}WARN: $1${COLOR_RESET}" 1>&2; }
-cmd_exists() { command -v $1 >/dev/null; }
+cmd_path() { command -v $1; }
+cmd_exists() { cmd_path $1 >/dev/null; }
 escape_color() { local c="COLOR_$1"; printf '%q' "${!c}" | sed "s/^''$//"; }
 rootfs_echo() { echo -e "$1" | $sudo tee "$rootfs_dir/$2" >/dev/null; }
+get_rootfs_mounts() { grep "$rootfs_dir" /proc/mounts | awk '{print $2}' || :; }
 run_script() { [ -e "$base_dir/mkrootfs.$1.sh" ] && . "$base_dir/mkrootfs.$1.sh" || :; }
 copy_script() { [ -e "$base_dir/mkrootfs.$1.sh" ] && $sudo cp "$base_dir/mkrootfs.$1.sh" "$rootfs_dir"/ || :; }
 parse_args() {
@@ -80,9 +84,12 @@ config_prep() {
 	. xbps-env.sh
 }
 check_deps() {
-	runtime_deps=(systemd-nspawn wget xz bsdtar mkfs.ext4 $sudo)
+	runtime_deps=($backend wget xz bsdtar mkfs.ext4 $sudo)
 	[ "$img_compress" = "gz" ] && runtime_deps+=(gzip)
-	[ "$qemu_arch" ] && runtime_deps+=(qemu-$qemu_arch-static)
+	if [ "$qemu_arch" ]; then
+		runtime_deps+=(qemu-$qemu_arch-static)
+		[ "$backend" != "systemd-nspawn" ] && runtime_deps+=(update-binfmts)
+	fi
 	[ ${#extra_build_pkgs[@]} -gt 0 ] && runtime_deps+=(git)
 	for dep in ${runtime_deps[@]}; do
 		cmd_exists $dep || missing_deps+=($dep)
@@ -114,6 +121,7 @@ print_config() {
   host:     $host_arch
   arch:     $arch
   release:  $release
+  backend:  $backend
   musl:     $musl
   mirror:   $mirror
   users:    $user_count
@@ -171,13 +179,21 @@ fetch_rootfs() {
 	rm "$tarball_dir/$rootfs_tarball"
 	die "Rootfs tarball checksum verification failed; please try again!"
 }
+umount_rootfs_special() {
+	for mount in ${SPECIAL_MOUNTS[@]}; do
+		$sudo umount -R "$rootfs_dir"/$mount
+	done
+}
 umount_rootfs() {
 	[ -e "$rootfs_dir" ] || return
 
-	local rootfs_mounts="$(grep "$rootfs_dir" /proc/mounts | awk '{print $2}' || :)"
+	local rootfs_mounts="$(get_rootfs_mounts)"
 	if [ "$rootfs_mounts" ]; then
+		if [ "$backend" != "systemd-nspawn" ]; then
+			umount_rootfs_special
+			rootfs_mounts="$(get_rootfs_mounts)"
+		fi
 		for mount in $rootfs_mounts; do
-			#echo "  unmounting $mount..."
 			$sudo umount "$mount"
 		done
 	fi
@@ -200,12 +216,23 @@ setup_pkgcache() {
 	rootfs_echo "cachedir=/pkgcache" /etc/xbps.d/pkgcache.conf
 }
 run_on_rootfs() {
-	$sudo systemd-nspawn -D "$rootfs_dir" -q $@ \
-		|| error "Something went wrong with the bootstrap process!"
+	$sudo $chroot "$rootfs_dir" $@ || error "Something went wrong with the bootstrap process!"
 }
 run_setup() {
 	log "Running $1 rootfs setup..."
 	run_on_rootfs /setup.sh $1
+}
+chroot_setup() {
+	for mount in ${SPECIAL_MOUNTS[@]}; do
+		$sudo mount --rbind /$mount "$rootfs_dir"/$mount
+		$sudo mount --make-rslave "$rootfs_dir"/$mount
+	done
+
+	if [ "$qemu_arch" ]; then
+		local binfmt_list="$(update-binfmts --display)"
+		[ "$binfmt_list" ] || error "Please re-check your binfmt-support setup!"
+		$sudo cp $(cmd_path qemu-$qemu_arch-static) "$rootfs_dir"/usr/bin/
+	fi
 }
 # Write content ($1) to a file ($2) on the rootfs.
 write_conf() {
@@ -213,6 +240,10 @@ write_conf() {
 
 	log "Writing $2 under $rootfs_dir..."
 	rootfs_echo "${1::-2}" $2
+}
+dns_setup() {
+	log "Copying /etc/resolv.conf from host under $rootfs_dir..."
+	$sudo cp -L /etc/resolv.conf "$rootfs_dir"/etc/
 }
 mkrootfs_conf_setup() {
 	local mkrootfs_conf=""
@@ -235,7 +266,16 @@ users_conf_setup() {
 	write_conf "$users_conf" /users.conf
 }
 prepare_bootstrap() {
-	# FIXME: also do sys,dev,proc mounts, resolv.conf copy & timezone symlink with proot!
+	if [ "$backend" = "systemd-nspawn" ]; then
+		if [ "$qemu_arch" ]; then
+			systemctl -q is-active systemd-binfmt || $sudo systemctl start systemd-binfmt
+		fi
+		chroot="systemd-nspawn -q --timezone=off -D"
+	else
+		chroot_setup
+		dns_setup
+		chroot="chroot"
+	fi
 
 	mkrootfs_conf_setup
 	users_conf_setup
@@ -350,6 +390,10 @@ finalize_setup() {
 		$sudo rmdir "$rootfs_dir"/packages
 	fi
 
+	if [ "$backend" != "systemd-nspawn" ]; then
+		umount_rootfs_special
+		[ "$qemu_arch" ] && rm -f "$rootfs_dir"/usr/bin/qemu-$qemu_arch-static
+	fi
 	local rootfs_size="$($sudo du -sh "$rootfs_dir" | awk '{print $1}')" # e.g. "447M"
 	log "Rootfs creation done; final size: $rootfs_size"
 }
