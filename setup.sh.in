@@ -23,6 +23,7 @@ USERS_GROUPS_COMMON="@USERS_GROUPS_COMMON@"
 USERS_SHELL_DEFAULT="@USERS_SHELL_DEFAULT@"
 USERS_SUDO_ASKPASS=@USERS_SUDO_ASKPASS@
 PERMIT_ROOT_LOGIN=@PERMIT_ROOT_LOGIN@
+VOID_PACKAGES_BRANCH=@VOID_PACKAGES_BRANCH@
 
 # Runtime vars
 ###############
@@ -80,9 +81,8 @@ install_extra_pkgs() {
 	[[ "$EXTRA_PKGS" && -e /packages ]] || return
 
 	log "Installing built extra packages $EXTRA_PKGS..."
-	# NOTE: There can be multiple subdirs depending on void-packages branch!
-	local pkg_dir="$(dirname $(find /packages -name "*.xbps" | head -1))"
-	xbps-rindex -a $pkg_dir/*.xbps # TODO: remove this line?
+	local pkg_dir="/packages/$VOID_PACKAGES_BRANCH" # e.g. "/packages/msm8998"
+	xbps-rindex -a $pkg_dir/*.xbps
 	xbps-install --repository=$pkg_dir -y $EXTRA_PKGS \
 		|| error "Failed to install extra packages!"
 }

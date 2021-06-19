@@ -57,6 +57,11 @@ setup_void_packages() {
 		git -C "$XBPS_DISTDIR" pull \
 			|| warn "Couldn't pull updates to void-packages clone automatically; ignoring..."
 	fi
+
+	if [ "$rootfs_dir" ]; then
+		local branch="$(git -C "$XBPS_DISTDIR" symbolic-ref --short HEAD)"
+		$sudo sed "s/@VOID_PACKAGES_BRANCH@/$branch/" -i "$rootfs_dir"/setup.sh
+	fi
 }
 check_pkg_updates() {
 	log "Checking updates for packages which will be built..."
