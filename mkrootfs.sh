@@ -80,7 +80,7 @@ config_prep() {
 	. xbps-env.sh
 }
 check_deps() {
-	runtime_deps=(systemd-nspawn wget xz mkfs.ext4 $sudo)
+	runtime_deps=(systemd-nspawn wget xz bsdtar mkfs.ext4 $sudo)
 	[ "$img_compress" = "gz" ] && runtime_deps+=(gzip)
 	[ "$qemu_arch" ] && runtime_deps+=(qemu-$qemu_arch-static)
 	[ ${#extra_build_pkgs[@]} -gt 0 ] && runtime_deps+=(git)
@@ -187,7 +187,7 @@ unpack_rootfs() {
 	log "Unpacking rootfs tarball..."
 	umount_rootfs
 	mkdir -p "$rootfs_dir"
-	$sudo tar xfp "$tarball_dir/$rootfs_tarball" -C "$rootfs_dir"
+	$sudo bsdtar xfp "$tarball_dir/$rootfs_tarball" -C "$rootfs_dir"
 	log "Rootfs size: $($sudo du -sh "$rootfs_dir" | awk '{print $1}')"
 }
 setup_pkgcache() {
