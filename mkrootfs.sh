@@ -207,6 +207,13 @@ run_setup() {
 	log "Running $1 rootfs setup..."
 	run_on_rootfs /setup.sh $1
 }
+# Write content ($1) to a file ($2) on the rootfs.
+write_conf() {
+	[ "$1" ] || return 0
+
+	log "Writing $2 under $rootfs_dir..."
+	rootfs_echo "${1::-2}" $2
+}
 prepare_bootstrap() {
 	# FIXME: also do sys,dev,proc mounts, resolv.conf copy & timezone symlink with proot!
 
@@ -217,10 +224,7 @@ prepare_bootstrap() {
 	for pattern in ${noextract[@]}; do
 		mkrootfs_conf+="noextract=$pattern\n"
 	done
-	if [ "$mkrootfs_conf" ]; then
-		log "Writing /etc/xbps.d/mkrootfs.conf under $rootfs_dir..."
-		rootfs_echo "${mkrootfs_conf::-2}" /etc/xbps.d/mkrootfs.conf
-	fi
+	write_conf "$mkrootfs_conf" /etc/xbps.d/mkrootfs.conf
 
 	local users_conf=""
 	for user in "${users[@]}"; do
@@ -229,8 +233,7 @@ prepare_bootstrap() {
 		usernames+=(${fields[0]})
 		users_conf+="$user\n"
 	done
-	log "Writing /users.conf under $rootfs_dir..."
-	rootfs_echo "${users_conf::-2}" /users.conf
+	write_conf "$users_conf" /users.conf
 
 	rm_pkgs="${rm_pkgs[@]}"
 	(( ${#noextract[@]}+${#rm_files[@]} > 0 )) \
