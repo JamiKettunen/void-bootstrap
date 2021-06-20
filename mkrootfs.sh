@@ -379,31 +379,38 @@ apply_overlays() {
 		#fi
 	done
 }
+teardown_pkgcache() {
+	[ -e "$rootfs_dir"/pkgcache ] || return 0
+
+	$sudo rm "$rootfs_dir"/etc/xbps.d/pkgcache.conf
+	$sudo umount "$rootfs_dir"/pkgcache
+	$sudo rmdir "$rootfs_dir"/pkgcache
+	$sudo chown -R $USER: "$pkgcache_dir"
+
+	if ! cmd_exists python3; then
+		warn "Not attempting to clean old version copies from cached packages as python3 wasn't found!"
+		return
+	fi
+
+	# FIXME: This appears to not work outside chroot(?) with static xbps
+	setup_xbps_static
+	log "Cleaning old version copies of cached packages..."
+	[ -e "$pkgcache_dir"/prune.py ] \
+		|| wget https://raw.githubusercontent.com/JamiKettunen/xbps-cache-prune/master/xbps-cache-prune.py \
+			-t 3 --show-progress -qO "$pkgcache_dir"/prune.py
+	# -d false
+	python3 "$pkgcache_dir"/prune.py -c "$pkgcache_dir" -n 3 || :
+}
+teardown_extra_pkgs() {
+	[ -e "$rootfs_dir"/packages ] || return 0
+
+	$sudo umount "$rootfs_dir"/packages
+	$sudo rmdir "$rootfs_dir"/packages
+}
 finalize_setup() {
 	$sudo rm "$rootfs_dir"/setup.sh
-	if [ -e "$rootfs_dir"/pkgcache ]; then
-		$sudo rm "$rootfs_dir"/etc/xbps.d/pkgcache.conf
-		$sudo umount "$rootfs_dir"/pkgcache
-		$sudo rmdir "$rootfs_dir"/pkgcache
-		$sudo chown -R $USER: "$pkgcache_dir"
-
-		if cmd_exists python3; then
-			# FIXME: This appears to not work outside chroot(?) with static xbps
-			setup_xbps_static
-			log "Cleaning old version copies of cached packages..."
-			[ -e "$pkgcache_dir"/prune.py ] \
-				|| wget https://raw.githubusercontent.com/JamiKettunen/xbps-cache-prune/master/xbps-cache-prune.py \
-					-t 3 --show-progress -qO "$pkgcache_dir"/prune.py
-			# -d false
-			python3 "$pkgcache_dir"/prune.py -c "$pkgcache_dir" -n 3 || :
-		else
-			warn "Not attempting to clean old version copies from cached packages as python3 wasn't found!"
-		fi
-	fi
-	if [ -e "$rootfs_dir"/packages ]; then
-		$sudo umount "$rootfs_dir"/packages
-		$sudo rmdir "$rootfs_dir"/packages
-	fi
+	teardown_pkgcache
+	teardown_extra_pkgs
 
 	if [ "$backend" != "systemd-nspawn" ]; then
 		umount_rootfs_special
