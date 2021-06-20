@@ -3,6 +3,7 @@ xbps_config_prep() {
 	masterdir="masterdir$musl_suffix"
 	host_target="${host_arch}${musl_suffix}"
 	[ "$host_arch" != "$arch" ] && cross_target="${arch}${musl_suffix}"
+	XBPS_DISTFILES_MIRROR="$mirror"
 	[ "$XBPS_DISTDIR" ] || XBPS_DISTDIR="void-packages"
 	[ "$build_chroot_preserve" ] || build_chroot_preserve="none"
 }
@@ -38,7 +39,7 @@ setup_xbps_static() {
 setup_xbps_src_conf() {
 	local xbps_src_config="# as configured in Void Bootstrap's config.sh"
 	add_if_set() { for cfg in $@; do cfg="XBPS_$cfg"; [ "${!cfg}" ] && xbps_src_config+="\n$cfg=\"${!cfg}\"" || :; done; }
-	add_if_set ALLOW_RESTRICTED CCACHE CHECK_PKGS DEBUG_PKGS MAKEJOBS
+	add_if_set ALLOW_RESTRICTED CCACHE CHECK_PKGS DEBUG_PKGS DISTFILES_MIRROR MAKEJOBS
 	local write_config=true
 	if [ -e etc/conf ]; then
 		local file_sum="$(sha256sum etc/conf | awk '{print $1}')"
