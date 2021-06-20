@@ -401,6 +401,7 @@ apply_overlays() {
 		$sudo cp -a "$overlay/$folder"/* "$rootfs_dir"
 
 		if [ -e "$rootfs_dir"/deploy.sh ]; then
+			$sudo sed '1 a . /setup.sh' -i "$rootfs_dir"/deploy.sh
 			$sudo chmod +x "$rootfs_dir"/deploy.sh
 			run_on_rootfs /deploy.sh
 			$sudo rm "$rootfs_dir"/deploy.sh
