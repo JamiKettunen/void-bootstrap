@@ -3,9 +3,10 @@ xbps_config_prep() {
 	masterdir="masterdir$musl_suffix"
 	host_target="${host_arch}${musl_suffix}"
 	[ "$host_arch" != "$arch" ] && cross_target="${arch}${musl_suffix}"
+	[ "$build_chroot_preserve" ] || build_chroot_preserve="none"
+	pkgs_build=(${extra_build_pkgs[@]})
 	XBPS_DISTFILES_MIRROR="$mirror"
 	[ "$XBPS_DISTDIR" ] || XBPS_DISTDIR="void-packages"
-	[ "$build_chroot_preserve" ] || build_chroot_preserve="none"
 }
 setup_xbps_static() {
 	cmd_exists xbps-uhelper && return
@@ -75,16 +76,18 @@ check_pkg_updates() {
 	fi
 }
 print_build_config() {
+	local pkgs_to_build="$(fold_offset 16 "${pkgs_build[@]}")"
 	log "Void package build configuration:
 
   masterdir:    $masterdir
   host target:  $host_target
-  cross target: $cross_target
-  packages:     $(fold_offset 16 "${extra_build_pkgs[@]}")
+  cross target: ${cross_target:-<none>}
+  packages:     ${pkgs_to_build:-<none>}
   chroot:       $build_chroot_preserve
 "
 }
 build_packages() {
+	[ "$1" ] && pkgs_build=($@)
 	pushd "$XBPS_DISTDIR" >/dev/null
 
 	# prep
@@ -113,7 +116,7 @@ build_packages() {
 	# TODO: Make sure somehow that we don't keep building packages that are already up-to-date?
 	# - Do this by checking matching version against /packages/**/*.xbps?
 	# - Perhaps store a checksum of srcpkgs/$pkg and check against later?
-	for pkg in ${extra_build_pkgs[@]}; do
+	for pkg in ${pkgs_build[@]}; do
 		if [ "$cross_target" ]; then
 			log "Cross-compiling extra package '$pkg' for $cross_target..."
 			./xbps-src -m $masterdir -a $cross_target pkg $pkg
