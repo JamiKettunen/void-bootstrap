@@ -1,5 +1,8 @@
 #!/bin/bash
 xbps_config_prep() {
+	masterdir="masterdir$musl_suffix"
+	host_target="${host_arch}${musl_suffix}"
+	[ "$host_arch" != "$arch" ] && cross_target="${arch}${musl_suffix}"
 	[ "$XBPS_DISTDIR" ] || XBPS_DISTDIR="void-packages"
 	[ "$build_chroot_preserve" ] || build_chroot_preserve="none"
 }
@@ -79,13 +82,6 @@ build_packages() {
 	pushd "$XBPS_DISTDIR" >/dev/null
 
 	# prep
-	local masterdir="masterdir"
-	if $musl; then
-		local musl_suffix="-musl"
-		masterdir+="$musl_suffix"
-	fi
-	local host_target="${host_arch}${musl_suffix}"
-	[ "$host_arch" != "$arch" ] && local cross_target="${arch}${musl_suffix}"
 	print_build_config
 	if [ -e $masterdir ]; then
 		if [ "$build_chroot_preserve" = "none" ]; then
