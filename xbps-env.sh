@@ -92,7 +92,7 @@ build_packages() {
 	if [ -e $masterdir ]; then
 		if [ "$build_chroot_preserve" = "none" ]; then
 			log "Removing existing build chroot..."
-			$sudo rm -r $masterdir
+			$sudo rm -rf $masterdir
 		elif [ "$build_chroot_preserve" = "ccache" ]; then
 			log "Cleaning existing build chroot (without removing ccache)..."
 			./xbps-src -m $masterdir zap
