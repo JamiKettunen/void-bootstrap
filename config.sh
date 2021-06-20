@@ -1,6 +1,12 @@
 # Config file for Void Bootstrap's mkrootfs.py
 
-# Target rootfs architecture; currently only aarch64 & armv7 are supported
+# Target rootfs architecture; currently available choices include:
+# "aarch64"
+# "armv6l"
+# "armv7l"
+# "x86_64"
+# "i686"
+# NOTE: i686 doesn't have a musl rootfs variant available!
 arch="aarch64"
 
 # Use musl as the standard C library instead of glibc? (true|false)

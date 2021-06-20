@@ -4,6 +4,7 @@ set -e
 
 # Constants
 ############
+SUPPORTED_ARCHES=(aarch64 armv6l armv7l x86_64 i686)
 DEF_MIRROR="https://alpha.de.repo.voidlinux.org"
 COLOR_GREEN="\e[32m"
 COLOR_BLUE="\e[36m"
@@ -51,9 +52,17 @@ config_prep() {
 	[ $EUID -eq 0 ] && unset sudo
 	. config.sh
 	[ -r "$config" ] && . "$config" || config="config.sh"
-	[[ "$arch" = "aarch64" || "$arch" = "armv7" ]] || error "Target architecture '$arch' is invalid!"
-	qemu_arch="$arch"
-	[[ "$arch" = "armv"* ]] && qemu_arch="arm"
+	echo " ${SUPPORTED_ARCHES[@]} " | grep -q " $arch " || error "Target architecture '$arch' is invalid!"
+	if [ "$arch" = "i686" ]; then
+		$musl && error "$arch doesn't have a musl rootfs variant available!"
+	fi
+	if [ "$host_arch" != "$arch" ]; then
+		case "$arch" in
+			"armv"*) qemu_arch="arm" ;;
+			"i686") qemu_arch="i386" ;;
+			*) qemu_arch="$arch" ;;
+		esac
+	fi
 	[ "$work_dir" ] || work_dir="."
 	work_dir="$(readlink -f "$work_dir")"
 	rootfs_dir="$work_dir/rootfs"
@@ -64,7 +73,8 @@ config_prep() {
 	[[ $((${#extra_build_pkgs[@]}+${#extra_install_pkgs[@]})) -gt 0 ]] || build_extra_pkgs=false
 }
 check_deps() {
-	runtime_deps=(systemd-nspawn qemu-$qemu_arch-static wget mkfs.ext4 $sudo)
+	runtime_deps=(systemd-nspawn wget mkfs.ext4 $sudo)
+	[ "$qemu_arch" ] && runtime_deps+=(qemu-$qemu_arch-static)
 	[ ${#extra_build_pkgs[@]} -gt 0 ] && runtime_deps+=(git)
 	for dep in ${runtime_deps[@]}; do
 		cmd_exists $dep || missing_deps+=($dep)
