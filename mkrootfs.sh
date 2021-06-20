@@ -80,7 +80,8 @@ config_prep() {
 	. xbps-env.sh
 }
 check_deps() {
-	runtime_deps=(systemd-nspawn wget mkfs.ext4 $sudo)
+	runtime_deps=(systemd-nspawn wget xz mkfs.ext4 $sudo)
+	[ "$img_compress" = "gz" ] && runtime_deps+=(gzip)
 	[ "$qemu_arch" ] && runtime_deps+=(qemu-$qemu_arch-static)
 	[ ${#extra_build_pkgs[@]} -gt 0 ] && runtime_deps+=(git)
 	for dep in ${runtime_deps[@]}; do
