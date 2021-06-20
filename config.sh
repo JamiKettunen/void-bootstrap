@@ -22,6 +22,11 @@ arch="aarch64"
 # Use musl as the standard C library instead of glibc? (true|false)
 musl=true
 
+# DNS nameservers to configure under rootfs /etc/resolv.conf
+# e.g. (1.1.1.1)
+# NOTE: () = copy from host
+dns=()
+
 # Configure user account(s) on the Void install
 # format: '<user>[:<password_in_plain_text_or_mkpasswd_output>:<comma_separated_extra_groups>:<shell_path>]'
 # NOTES:
