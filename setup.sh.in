@@ -60,9 +60,6 @@ base_setup() {
 		rm -f $RM_FILES
 	fi
 
-	#log "Making sure all packages are configured..."
-	#xbps-reconfigure -fa
-
 	log "Upgrading all base packages..."
 	xbps-install -u -y
 
@@ -76,12 +73,8 @@ base_setup() {
 	fi
 }
 stage1_setup() {
-	# TODO: Do we need to "xbps-reconfigure -f glibc-locales" here already on glibc?
 	mirror_setup
 	base_setup
-	# TODO: /etc/localtime (timezone...)
-	# TODO: tty_keymap...
-	# TODO: tty_font...
 }
 install_extra_pkgs() {
 	[[ "$EXTRA_PKGS" && -e /packages ]] || return
@@ -102,11 +95,6 @@ sv_setup() {
 	if [ "$DISABLE_SV" ]; then
 		log "Disabling runit services $DISABLE_SV..."
 		disable_sv $DISABLE_SV
-	fi
-
-	if [ -e /etc/sv/socklog-unix ]; then
-		log "Enabling socklog services..."
-		enable_sv socklog-unix nanoklogd
 	fi
 }
 user_setup() {
@@ -144,12 +132,6 @@ user_setup() {
 	local nopasswd=""
 	$USERS_SUDO_ASKPASS || nopasswd=" NOPASSWD:"
 	echo "%wheel ALL=(ALL)${nopasswd} ALL" > /etc/sudoers.d/wheel-group-members
-
-	# declare -A user_groups
-	# user_groups=( ["user1"]="group1,group2,group3" ["user2"]="g1,g2")
-	# for user in "${!user_groups[@]}"; do echo "$user: ${user_groups[$user]}"; done
-	# user2_groups=(${users_common_groups[@]} $(echo "${user_groups[user2]}"))
-	# printf "user2:bruh:group1,g2,g3\nuser2:bruh2:g1,g2,g3" | awk -F':' '{printf "%s:%s\n", $1, $2}'
 }
 stage2_setup() {
 	install_extra_pkgs
