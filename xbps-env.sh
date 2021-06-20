@@ -88,7 +88,10 @@ print_build_config() {
 }
 build_packages() {
 	[ "$1" ] && pkgs_build=($@)
-	pushd "$XBPS_DISTDIR" >/dev/null
+
+	local chdir=false
+	[[ "$(basename "$PWD")" = "void-packages"* ]] || chdir=true
+	$chdir && pushd "$XBPS_DISTDIR" >/dev/null || :
 
 	# prep
 	print_build_config
@@ -126,7 +129,7 @@ build_packages() {
 		fi
 	done
 
-	popd >/dev/null
+	$chdir && popd >/dev/null || :
 }
 
 xbps_config_prep
