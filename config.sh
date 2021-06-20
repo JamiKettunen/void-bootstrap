@@ -121,6 +121,7 @@ overlays=()
 
 # xbps-src options
 # https://github.com/void-linux/void-packages/blob/master/etc/defaults.conf
+#XBPS_DISTDIR="/path/to/void-packages"
 XBPS_ALLOW_RESTRICTED="yes"
 XBPS_CCACHE="yes"
 XBPS_MAKEJOBS="$(nproc)" # e.g. "16" / "$(nproc)"

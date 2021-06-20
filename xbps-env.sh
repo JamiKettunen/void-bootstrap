@@ -1,5 +1,6 @@
 #!/bin/bash
 xbps_config_prep() {
+	[ "$XBPS_DISTDIR" ] || XBPS_DISTDIR="void-packages"
 	[ "$build_chroot_preserve" ] || build_chroot_preserve="none"
 }
 setup_xbps_static() {
@@ -44,12 +45,12 @@ setup_xbps_src_conf() {
 	$write_config && echo -e "$xbps_src_config" > etc/conf || :
 }
 setup_void_packages() {
-	if [ ! -e void-packages ]; then
+	if [ ! -e "$XBPS_DISTDIR" ]; then
 		log "Creating a local clone of $void_packages..."
-		git clone $void_packages void-packages
+		git clone $void_packages "$XBPS_DISTDIR"
 	else
 		log "Pulling updates to local void-packages clone..."
-		git -C void-packages pull \
+		git -C "$XBPS_DISTDIR" pull \
 			|| warn "Couldn't pull updates to void-packages clone automatically; ignoring..."
 	fi
 }
@@ -75,7 +76,7 @@ print_build_config() {
 "
 }
 build_packages() {
-	pushd void-packages >/dev/null
+	pushd "$XBPS_DISTDIR" >/dev/null
 
 	# prep
 	local masterdir="masterdir"

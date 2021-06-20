@@ -265,7 +265,7 @@ extra_pkgs_setup() {
 	fi
 
 	if [ "$extra_install_pkgs" ]; then
-		local binpkgs="void-packages/hostdir/binpkgs"
+		local binpkgs="$XBPS_DISTDIR/hostdir/binpkgs"
 		if [ -e $binpkgs ]; then
 			$sudo mkdir "$rootfs_dir"/packages
 			$sudo mount --bind $binpkgs "$rootfs_dir"/packages
