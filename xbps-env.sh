@@ -65,15 +65,24 @@ setup_void_packages() {
 	fi
 }
 check_pkg_updates() {
-	log "Checking updates for packages which will be built..."
-	local updates=""
-	for pkg in ${extra_build_pkgs[@]}; do
-		updates+="$(./xbps-src update-check $pkg)"
+	[ "$1" ] && pkgs_build=($@)
+
+	local chdir=false
+	[[ "$(basename "$PWD")" = "void-packages"* ]] || chdir=true
+	$chdir && pushd "$XBPS_DISTDIR" >/dev/null || :
+
+	log "Checking updates for ${#pkgs_build[@]} packages..."
+	local updates="" tmp=""
+	for pkg in ${pkgs_build[@]}; do
+		tmp="$(./xbps-src update-check $pkg)"
+		[ "$tmp" ] && updates+="$tmp\n"
 	done
 	if [ "$updates" ]; then
-		warn "Some packages (listed below) appear to be out of date; continuing anyway..."
-		echo -e "$updates"
+		warn "Some packages (listed below) appear to be out of date:"
+		echo -e "${updates::-2}"
 	fi
+
+	$chdir && popd >/dev/null || :
 }
 print_build_config() {
 	local pkgs_to_build="$(fold_offset 16 "${pkgs_build[@]}")"
