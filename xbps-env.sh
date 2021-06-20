@@ -35,7 +35,7 @@ setup_xbps_static() {
 setup_xbps_src_conf() {
 	local xbps_src_config="# as configured in Void Bootstrap's config.sh"
 	add_if_set() { for cfg in $@; do cfg="XBPS_$cfg"; [ "${!cfg}" ] && xbps_src_config+="\n$cfg=\"${!cfg}\"" || :; done; }
-	add_if_set ALLOW_RESTRICTED DEBUG_PKGS MAKEJOBS CCACHE CHECK_PKGS
+	add_if_set ALLOW_RESTRICTED CCACHE CHECK_PKGS DEBUG_PKGS MAKEJOBS
 	local write_config=true
 	if [ -e etc/conf ]; then
 		local file_sum="$(sha256sum etc/conf | awk '{print $1}')"

@@ -124,5 +124,7 @@ overlays=()
 #XBPS_DISTDIR="/path/to/void-packages"
 XBPS_ALLOW_RESTRICTED="yes"
 XBPS_CCACHE="yes"
+#XBPS_CHECK_PKGS="full"
+#XBPS_DEBUG_PKGS="yes"
 XBPS_MAKEJOBS="$(nproc)" # e.g. "16" / "$(nproc)"
 # TODO: distcc config
