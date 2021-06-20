@@ -370,6 +370,7 @@ extra_pkgs_setup() {
 			log "Creating a local clone of $void_packages..."
 			git clone $void_packages
 		else
+			log "Pulling updates to local void-packages clone..."
 			git -C void-packages pull \
 				|| warn "Couldn't pull updates to void-packages clone automatically; ignoring..."
 		fi
@@ -390,7 +391,7 @@ extra_pkgs_setup() {
 apply_overlays() {
 	[ ${#overlays[@]} -gt 0 ] || return 0
 
-	log "Applying ${#overlays[@]} enabled overlay(s)..."
+	#log "Applying ${#overlays[@]} enabled overlay(s)..."
 	local overlay="$base_dir/overlay"
 	for folder in ${overlays[@]}; do
 		if [[ ! -d "$overlay/$folder" || $(ls -1 "$overlay/$folder" | wc -l) -eq 0 ]]; then
@@ -398,6 +399,7 @@ apply_overlays() {
 			continue
 		fi
 
+		log "Applying enabled overlay $folder..."
 		$sudo cp -a "$overlay/$folder"/* "$rootfs_dir"
 
 		if [ -e "$rootfs_dir"/deploy.sh ]; then
