@@ -79,11 +79,13 @@ check_deps() {
 	for dep in ${runtime_deps[@]}; do
 		cmd_exists $dep || missing_deps+=($dep)
 	done
-	[ ${#missing_deps[@]} -eq 0 ] && return
+	local error_count=${#missing_deps[@]}
+	[ $error_count -eq 0 ] && return
 
-	error "${#missing_deps[@]} missing runtime dependencies found:
-	
-   ${missing_deps[@]}
+	missing_deps="${missing_deps[@]}"
+	error "$error_count missing runtime dependencies found:
+
+   $missing_deps
 "
 }
 # Fold while offsetting ouput lines after the first one by $1 spaces.
