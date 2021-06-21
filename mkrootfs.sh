@@ -218,6 +218,9 @@ setup_pkgcache() {
 run_on_rootfs() {
 	$sudo $chroot "$rootfs_dir" $@ || error "Something went wrong with the bootstrap process!"
 }
+run_on_rootfs_shell() {
+	$sudo $chroot "$rootfs_dir" /bin/bash -c "$1" || error "Something went wrong with the bootstrap process!"
+}
 run_setup() {
 	log "Running $1 rootfs setup..."
 	run_on_rootfs /setup.sh $1
@@ -359,24 +362,35 @@ apply_overlays() {
 		fi
 
 		log "Applying enabled overlay $folder..."
-		$sudo cp -a "$overlay/$folder"/* "$rootfs_dir"
+		$sudo cp -r "$overlay/$folder"/* "$rootfs_dir"
 
+		if [ -e "$rootfs_dir"/deploy_host.sh ]; then
+			. "$rootfs_dir"/deploy_host.sh
+			$sudo rm "$rootfs_dir"/deploy_host.sh
+		fi
 		if [ -e "$rootfs_dir"/deploy.sh ]; then
 			$sudo sed '1 a . /setup.sh' -i "$rootfs_dir"/deploy.sh
 			$sudo chmod +x "$rootfs_dir"/deploy.sh
 			run_on_rootfs /deploy.sh
 			$sudo rm "$rootfs_dir"/deploy.sh
 		fi
-		if [ -e "$rootfs_dir"/deploy_host.sh ]; then
-			. "$rootfs_dir"/deploy_host.sh
-			$sudo rm "$rootfs_dir"/deploy_host.sh
+		if [ -e "$rootfs_dir"/home/ALL ]; then
+			for user in ${usernames[@]}; do
+				# TODO: also cp to /root?
+				[ "$user" = "root" ] && continue
+				$sudo cp -r "$rootfs_dir"/home/ALL/. "$rootfs_dir"/home/$user/
+			done
+			$sudo rm -r "$rootfs_dir"/home/ALL
 		fi
+	done
+}
+fix_user_perms() {
+	[ $user_count -gt 0 ] || return 0
 
-		# FIXME: Make sure /packages from build results is umounted etc before this is done!
-		#if [ -d "$rootfs_dir"/packages ]; then
-		#	log "TODO: Install overlay packages from /packagess/*.xbps!"
-		#	$sudo rm -r "$rootfs_dir"/packages
-		#fi
+	log "Fixing home folder ownership for $user_count user(s)..."
+	for user in ${usernames[@]}; do
+		[ "$user" = "root" ] && continue
+		run_on_rootfs_shell "chown -R $user: /home/$user"
 	done
 }
 teardown_pkgcache() {
@@ -411,11 +425,13 @@ finalize_setup() {
 	$sudo rm "$rootfs_dir"/setup.sh
 	teardown_pkgcache
 	teardown_extra_pkgs
+	fix_user_perms
 
 	if [ "$backend" != "systemd-nspawn" ]; then
 		umount_rootfs_special
 		[ "$qemu_arch" ] && rm -f "$rootfs_dir"/usr/bin/qemu-$qemu_arch-static
 	fi
+	[ ${#overlays[@]} -gt 0 ] && $sudo find "$rootfs_dir" -type f -name '.keep' -delete
 	local rootfs_size="$($sudo du -sh "$rootfs_dir" | awk '{print $1}')" # e.g. "447M"
 	log "Rootfs creation done; final size: $rootfs_size"
 }
