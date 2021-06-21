@@ -28,7 +28,7 @@ chroot="" # e.g. "chroot" or "systemd-nspawn -q -D"
 build_extra_pkgs=true
 missing_deps=()
 user_count=0
-sudo="sudo" # unset if running as root
+sudo="sudo" # prefix for commands requiring root user privileges; unset if running as root
 usernames=()
 
 # Functions
@@ -91,6 +91,7 @@ check_deps() {
 		[ "$backend" != "systemd-nspawn" ] && runtime_deps+=(update-binfmts)
 	fi
 	[ ${#extra_build_pkgs[@]} -gt 0 ] && runtime_deps+=(git)
+
 	for dep in ${runtime_deps[@]}; do
 		cmd_exists $dep || missing_deps+=($dep)
 	done
