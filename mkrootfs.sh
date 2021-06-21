@@ -431,7 +431,7 @@ finalize_setup() {
 
 	if [ "$backend" != "systemd-nspawn" ]; then
 		umount_rootfs_special
-		[ "$qemu_arch" ] && rm -f "$rootfs_dir"/usr/bin/qemu-$qemu_arch-static
+		[ "$qemu_arch" ] && $sudo rm -f "$rootfs_dir"/usr/bin/qemu-$qemu_arch-static
 	fi
 	[ ${#overlays[@]} -gt 0 ] && $sudo find "$rootfs_dir" -type f -name '.keep' -delete
 	local rootfs_size="$($sudo du -sh "$rootfs_dir" | awk '{print $1}')" # e.g. "447M"
