@@ -25,7 +25,12 @@ Optional arguments
 Optional arguments
 * `-i rootfs.img`: Specify a rootfs image path to deploy
 * `-s rootfs_resize_gb`: Gigabytes to resize the deployed image to, defaults to `8`
-* `-t target_location`: Rootfs target location on the device, defaults to `/data/void-rootfs.img`
+* `-t target_location`: Rootfs target location on the device
+  * Defaults to `/data/void-rootfs.img`
+  * Should point to a partition by name such as `system` when flashing via `fastboot`
+  * When set to `nbd` exports `rootfs` via a network block device server which can be booted via [an initramfs](https://github.com/JamiKettunen/initramfs-tools)
+* `-f`: Automatically answer yes to any "overwrite existing rootfs" questions
+* `-k`: Automatically answer yes to any "kill running NBD server" questions
 * `-R`: Don't reboot the device after rootfs deployment
 
 ## Optional scripts

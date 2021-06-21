@@ -1,0 +1,10 @@
+[generic]
+authfile = allowed_clients
+copyonwrite = false
+allowlist = true
+max_threads = @NPROC@
+maxconnections = 1
+timeout = 5
+
+[rootfs]
+exportname = @ROOTFS@

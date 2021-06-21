@@ -4,34 +4,44 @@
 ###############
 IMG=""
 resize_gb="8"
-# TODO: allow flashing to partition or even directory!
-target_file="/data/void-rootfs.img"
+target="/data/void-rootfs.img"
+nbd_target=false
+force_kill_nbd=false
+overwrite=false
 reboot=true
 
 # Functions
 ############
+log() { echo ">> $1"; }
 die() { echo -e "$1" 1>&2; exit 1; }
 err() { die "ERROR: $1"; }
-usage() { die "usage: $0 [-i rootfs.img] [-s rootfs_resize_gb] [-t target_location] [-R]"; }
+usage() { die "usage: $0 [-i rootfs.img] [-s rootfs_resize_gb] [-t target_location] [-f] [-k] [-R]"; }
 parse_args() {
-	while getopts ":i:s:t:R" OPT; do
+	while getopts ":i:s:t:fkR" OPT; do
 		case "$OPT" in
 			i) IMG="$OPTARG" ;;
 			s) resize_gb=$OPTARG ;;
-			t) target_file="$OPTARG" ;;
+			t) target="$OPTARG" ;;
+			f) overwrite=true ;;
+			k) force_kill_nbd=true ;;
 			R) reboot=false ;;
 			*) usage ;;
 		esac
 	done
+	[ "$target" = "nbd" ] && nbd_target=true || :
 }
 print_config() {
 	echo "Deployment configuration:
 
   rootfs: $IMG
-  target: $target_file
-  size:   ${resize_gb}G
-  reboot: $reboot
-"
+  target: $target
+  size:   ${resize_gb}G"
+	if $nbd_target; then
+		echo "  kill:   $force_kill_nbd"
+	else
+		echo "  reboot: $reboot"
+	fi
+	echo
 }
 prepare() {
 	OPTS=($(ls images/*rootfs*.img* 2>/dev/null || :))
@@ -47,7 +57,6 @@ choose_img() {
 	for r in ${OPTS[@]}; do
 		((i++)) || :
 		r="${r##*/}" # strip "images/" prefix
-		#r="${r%.*}" # drop ".img*" extension
 		echo "  $i. $r (${SIZES[(($i-1))]})"
 	done
 	echo
@@ -55,18 +64,15 @@ choose_img() {
 		read -p "Choice (1) >> " i ||
 		read -p "Choice (1-$i) >> " i
 	IMG="${OPTS[(($i-1))]}"
-	# IMG=images/aarch64-musl-rootfs-op5-2021-06-03.img
 }
 unpack_img() {
 	rm -f rootfs.img # cleanup
-
 	if [[ "$IMG" = *".img" ]]; then # not compressed
 		ln -s "$IMG" rootfs.img
-		#cp "$IMG" rootfs.img
 		return
 	fi
 
-	echo ">> Unpacking '$IMG'..."
+	log "Unpacking '$IMG'..."
 	if [[ "$IMG" = *".xz" ]]; then
 		hash pixz &>/dev/null \
 			&& pixz -kd "$IMG" rootfs.img \
@@ -79,34 +85,55 @@ unpack_img() {
 		err "No decompression handler to unpack '$IMG'!"
 	fi
 }
-# TODO: Allow flashing to partition from fastboot mode!
-wait_recovery() {
-	device=""
-	echo ">> Waiting for a device in recovery mode..."
-	while true; do
-		if adb devices | grep -q recovery; then
-			device="$(adb shell getprop ro.product.device)"
-			break
-		fi
-		sleep 1
-	done
+get_mode() {
+	[ "$(fastboot devices)" ] && echo "fastboot" && return
+	[[ "$(adb devices)" = *"recovery"* ]] && echo "recovery" && return
+	echo "unknown"
 }
-deploy_img() {
-	echo ">> Detected your '$device' in recovery mode!"
-	if adb shell test -e $target_file; then
-		read -erp ">> Overwrite existing $target_file (y/N)? " ans
+droid_wait_device() {
+	log "Waiting for a device in recovery or fastboot mode..."
+	mode="$(get_mode)"
+	while [ "$mode" = "unknown" ]; do
+		sleep 2
+		mode="$(get_mode)"
+	done
+	[ "$mode" = "recovery" ] && device="$(adb shell getprop ro.product.device)" || :
+}
+droid_deploy_recovery() {
+	if ! $overwrite && adb shell test -e $target; then
+		read -erp ">> Overwrite existing $target (y/N)? " ans
 		[[ "${ans^^}" != "Y"* ]] && exit 0
 	fi
-	echo ">> transferring as $(basename $target_file)..."
-	adb push rootfs.img $target_file
+
+	log "Transferring as $(basename $target)..."
+	adb push rootfs.img $target
+	log "Resizing rootfs on device to $resize_gb GiB..."
+	adb shell "resize2fs $target ${resize_gb}G"
+}
+fastboot_get_pars() {
+	fastboot getvar all 2>&1 | grep -Po 'partition-type:\K.*(?=:)'
+}
+droid_deploy_fastboot() {
+	fastboot_get_pars | grep -q "$target" \
+		|| err "A partition named '$target' doesn't exist on device;
+       please change it via e.g. '-t system'!"
+
+	log "Flashing rootfs to device partition $target via fastboot..."
+	fastboot flash $target rootfs.img
+}
+droid_deploy_img() {
+	log "Detected your ${device:-device} in $mode mode!"
+	if [ "$mode" = "recovery" ]; then
+		droid_deploy_recovery
+	elif [ "$mode" = "fastboot" ]; then
+		droid_deploy_fastboot
+	fi
 	rm rootfs.img
-	echo ">> Resizing rootfs on device to $resize_gb GiB..."
-	adb shell "resize2fs $target_file ${resize_gb}G"
 }
 mount_rootfs() {
 	adb shell << EOF
 mkdir /a
-mount $target_file /a
+mount $target /a
 EOF
 }
 umount_rootfs() {
@@ -116,27 +143,80 @@ rmdir /a
 sync
 EOF
 }
-flash_kernel() {
+droid_flash_kernel() {
 	mount_rootfs
 	if ! adb shell test -e /a/boot/boot.img; then
 		umount_rootfs
 		return
 	fi
 
-	echo ">> Flashing /boot/boot.img from rootfs..."
+	log "Flashing /boot/boot.img from rootfs..."
 	adb shell "dd bs=4m if=/a/boot/boot.img of=/dev/block/bootdevice/by-name/boot"
-	#umount_rootfs
+	umount_rootfs
+}
+droid_reboot() {
+	log "Rebooting device..."
+	if [ "$mode" = "recovery" ]; then
+		adb shell "reboot"
+	elif [ "$mode" = "fastboot" ]; then
+		fastboot reboot
+	fi
+}
+droid_flash() {
+	droid_wait_device
+	droid_deploy_img
+	[ "$mode" = "recovery" ] && droid_flash_kernel
+	$reboot && droid_reboot
+}
+nbd_prepare() {
+	local pid="$(pgrep -f "nbd-server -C $PWD/nbd/config")"
+	if [ "$pid" ]; then
+		if ! $force_kill_nbd; then
+			read -erp ">> Stop the still-running nbd-server (pid $pid) (Y/n)? " ans
+			[[ -z "${ans}" || "${ans}" = "Y"* ]] || exit 0
+		fi
+		log "Stopping existing nbd-server process (pid $pid)..."
+		kill $pid
+	fi
+}
+nbd_setup() {
+	local rootfs="$(readlink -f "$PWD/rootfs.img")"
+	sed -e "s/@NPROC@/$(nproc)/" -e "s|@ROOTFS@|$rootfs|" \
+		nbd/config.in > nbd/config
+	if [ -e nbd/allowed_clients ]; then
+		sed -e "s/@AUTHFILE@/authfile = allowed_clients/" -i nbd/config
+	else
+		sed -e "/@AUTHFILE@/d" -i nbd/config
+	fi
+
+	# TODO: e2fsck?
+	log "Resizing $(basename "$rootfs") to $resize_gb GiB..."
+	resize2fs "$rootfs" ${resize_gb}G
+	log "Starting nbd-server..."
+	nbd-server -C $PWD/nbd/config
+	log "Available NBD shares on this PC:"
+	nbd-client -l 127.0.0.1 | tail +2
 }
 
 # Script
 #########
+cd "$(readlink -f "$(dirname "$0")")"
 parse_args $@
 prepare
 choose_img
 print_config
-wait_recovery
-unpack_img
-deploy_img
-flash_kernel
-$reboot && adb shell "reboot"
-echo ">> Done!"
+nbd_prepare
+if ! $nbd_target; then
+	unpack_img
+	droid_flash
+else
+	if [ -e rootfs.img ]; then
+		if ! $overwrite; then
+			read -erp ">> Previous rootfs.img found; replace it with a fresh copy of $(basename "$IMG") (y/N)? " ans
+			[[ "${ans^^}" = "Y"* ]] && overwrite=true
+		fi
+		$overwrite && unpack_img || :
+	fi
+	nbd_setup
+fi
+log "Done!"

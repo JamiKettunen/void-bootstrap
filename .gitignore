@@ -4,6 +4,9 @@
 # rootfs images (.img*)
 /images
 
+# local nbd config
+/nbd/config
+
 # xbps package cache
 /pkgcache
 
