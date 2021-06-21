@@ -57,6 +57,7 @@ parse_args() {
 }
 config_prep() {
 	[ $EUID -eq 0 ] && unset sudo
+	cd "$base_dir"
 	. config.sh
 	[ -r "$config" ] && . "$config" || config="config.sh"
 	echo " ${SUPPORTED_ARCHES[@]} " | grep -q " $arch " || error "Target architecture '$arch' is invalid!"
