@@ -209,7 +209,7 @@ unpack_rootfs() {
 	log "Rootfs size: $($sudo du -sh "$rootfs_dir" | awk '{print $1}')"
 }
 setup_pkgcache() {
-	[ "$pkgcache_dir" ] || return
+	[ "$pkgcache_dir" ] || return 0
 
 	log "Preparing package cache for use..."
 	[ -e "$pkgcache_dir" ] || mkdir -p "$pkgcache_dir"
