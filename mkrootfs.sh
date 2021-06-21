@@ -85,7 +85,7 @@ config_prep() {
 	. xbps-env.sh
 }
 check_deps() {
-	runtime_deps=($backend wget xz bsdtar mkfs.ext4 $sudo)
+	runtime_deps=($backend wget xz mkfs.ext4 $sudo)
 	[ "$img_compress" = "gz" ] && runtime_deps+=(gzip)
 	if [ "$qemu_arch" ]; then
 		runtime_deps+=(qemu-$qemu_arch-static)
@@ -205,7 +205,7 @@ unpack_rootfs() {
 	log "Unpacking rootfs tarball..."
 	umount_rootfs
 	mkdir -p "$rootfs_dir"
-	$sudo bsdtar xfp "$tarball_dir/$rootfs_tarball" -C "$rootfs_dir"
+	$sudo tar xfp "$tarball_dir/$rootfs_tarball" -C "$rootfs_dir"
 	log "Rootfs size: $($sudo du -sh "$rootfs_dir" | awk '{print $1}')"
 }
 setup_pkgcache() {
