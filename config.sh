@@ -70,6 +70,10 @@ mirror=""
 # Extra string to append to rootfs filename
 img_name_extra=""
 
+# Format of date string appended to end of rootfs filename
+# https://man.voidlinux.org/date
+img_date_format="%Y-%m-%d"
+
 # Maximum size the rootfs image is expected to reach during the creation process.
 img_size="4G"
 
