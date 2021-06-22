@@ -110,6 +110,19 @@ rm_pkgs=()
 # Additional packages to install
 base_pkgs=()
 
+# Void packages git repo to clone when packages are defined in extra_build_pkgs
+void_packages="https://github.com/void-linux/void-packages.git"
+
+# Repo branch to clone; e.g. "master"
+# "" = repo default
+void_packages_branch=""
+
+# Should the repo be cloned/updated with --depth 1? (true|false)
+void_packages_shallow=true
+
+# Path to an optional SSH private key file used for cloning/updating a private repo
+void_packages_privkeyfile=""
+
 # Void package build chroot preservation options:
 # "none"   -> don't preserve compilation masterdir environments
 # "ccache" -> preserve only ccache from previous runs (recommended)
@@ -120,9 +133,6 @@ build_chroot_preserve="ccache"
 # NOTE: Use extra_install_pkgs=(${extra_build_pkgs[@]}) to install all built packages
 extra_build_pkgs=()
 extra_install_pkgs=()
-
-# Void packages git repo to clone when packages are defined in extra_build_pkgs
-void_packages="https://github.com/void-linux/void-packages.git"
 
 # Additional runit services to enable
 enable_sv=()

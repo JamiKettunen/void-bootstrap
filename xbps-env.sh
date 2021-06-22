@@ -5,6 +5,15 @@ xbps_config_prep() {
 	[ "$host_arch" != "$arch" ] && cross_target="${arch}${musl_suffix}"
 	[ "$build_chroot_preserve" ] || build_chroot_preserve="none"
 	pkgs_build=(${extra_build_pkgs[@]})
+	if [ "$void_packages_privkeyfile" ]; then
+		void_packages_privkeyfile="$(readlink -f "$void_packages_privkeyfile")"
+		if [ -r "$void_packages_privkeyfile" ]; then
+			export GIT_SSH_COMMAND="ssh -i $void_packages_privkeyfile -o StrictHostKeyChecking=no"
+		else
+			warn "Private key file '$(basename "$void_packages_privkeyfile")' for void-packages not found; ignoring..."
+			void_packages_privkeyfile=""
+		fi
+	fi
 	XBPS_DISTFILES_MIRROR="$mirror"
 	[ "$XBPS_DISTDIR" ] || XBPS_DISTDIR="void-packages"
 }
@@ -49,19 +58,82 @@ setup_xbps_src_conf() {
 	fi
 	$write_config && echo -e "$xbps_src_config" > etc/conf || :
 }
+# Returns void-packages clone branch name; e.g. "master"
+branch_of_void_packages() { git -C "$XBPS_DISTDIR" symbolic-ref --short HEAD; }
+# Returns void-packages clone status; e.g. "up-to-date", "behind", "ahead" or "diverged"
+status_of_void_packages() {
+	local a=$1 b=$2 # e.g. master v.s. origin/master
+	local base=$(git -C "$XBPS_DISTDIR" merge-base $a $b)
+	local aref=$(git -C "$XBPS_DISTDIR" rev-parse $a)
+	local bref=$(git -C "$XBPS_DISTDIR" rev-parse $b)
+
+	if [ "$aref" = "$bref" ]; then
+		echo up-to-date
+	elif [ "$aref" = "$base" ]; then
+		echo behind
+	elif [ "$bref" = "$base" ]; then # FIXME?
+		echo ahead
+	else
+		echo diverged
+	fi
+}
+update_void_packages() {
+	local branch="$(branch_of_void_packages)"
+	if ! $void_packages_shallow; then
+		log "Pulling updates to local void-packages clone..."
+		git -C "$XBPS_DISTDIR" pull && return
+
+		warn "Couldn't pull updates to void-packages clone; trying shallow method..."
+	else
+		log "Pulling updates to local void-packages shallow clone..."
+		git -C "$XBPS_DISTDIR" fetch --depth 1 # origin $branch:$branch
+	fi
+
+	if [[ "$(git -C "$XBPS_DISTDIR" status -s)" ]]; then
+		warn "Local void-packages clone not clean; refusing to automatically update!"
+		return
+	fi
+
+	local origin="origin/$branch"
+	local status="$(status_of_void_packages $branch $origin)"
+	case "$status" in
+		"up-to-date") return ;;
+		"diverged")
+			local total_commmits=$(git -C "$XBPS_DISTDIR" rev-list --count HEAD) # e.g. 1 on shallow clones
+			if [ $total_commmits -gt 1 ]; then
+				warn "Refusing to update diverged $branch with more than one commit to $origin!"
+				return
+			fi
+			;;
+		"ahead")
+			warn "Refusing to update from $branch to $origin; status: $status"
+			return
+			;;
+	esac
+
+	git -C "$XBPS_DISTDIR" reset --hard $origin
+	#git -C "$XBPS_DISTDIR" clean -dfx
+}
 setup_void_packages() {
 	if [ ! -e "$XBPS_DISTDIR" ]; then
-		log "Creating a local clone of $void_packages..."
-		git clone $void_packages "$XBPS_DISTDIR"
+		local git_extra=()
+		local msg_extra=""
+		if $void_packages_shallow; then
+			git_extra+=("--depth 1")
+			msg_extra="shallow "
+		fi
+		if [ "$void_packages_branch" ]; then
+			git_extra+=("-b $void_packages_branch")
+		fi
+
+		log "Creating a ${msg_extra}local clone of $void_packages..."
+		git clone ${git_extra[@]} $void_packages "$XBPS_DISTDIR"
 	else
-		log "Pulling updates to local void-packages clone..."
-		git -C "$XBPS_DISTDIR" pull \
-			|| warn "Couldn't pull updates to void-packages clone automatically; ignoring..."
+		update_void_packages
 	fi
 
 	if [ "$rootfs_dir" ]; then
-		local branch="$(git -C "$XBPS_DISTDIR" symbolic-ref --short HEAD)"
-		$sudo sed "s/@VOID_PACKAGES_BRANCH@/$branch/" -i "$rootfs_dir"/setup.sh
+		$sudo sed "s/@VOID_PACKAGES_BRANCH@/$(branch_of_void_packages)/" -i "$rootfs_dir"/setup.sh
 	fi
 }
 check_pkg_updates() {
