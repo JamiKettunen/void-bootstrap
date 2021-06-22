@@ -148,7 +148,7 @@ stage2_setup() {
 		echo "$HOSTNAME" > /etc/hostname
 	fi
 
-	log "Setting /root permissions to 700 (from 750)..."
+	log "Setting /root permissions to 700 (from $(stat -c '%a' /root))..."
 	chmod 700 /root
 
 	local custom_script="/mkrootfs.custom.sh"
