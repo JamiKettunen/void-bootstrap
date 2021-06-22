@@ -166,7 +166,7 @@ droid_flash() {
 	droid_wait_device
 	droid_deploy_img
 	[ "$mode" = "recovery" ] && droid_flash_kernel
-	$reboot && droid_reboot
+	$reboot && droid_reboot || :
 }
 nbd_prepare() {
 	local pid="$(pgrep -f "nbd-server -C $PWD/nbd/config")"
@@ -216,6 +216,8 @@ else
 			[[ "${ans^^}" = "Y"* ]] && overwrite=true
 		fi
 		$overwrite && unpack_img || :
+	else
+		unpack_img
 	fi
 	nbd_setup
 fi
