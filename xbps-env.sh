@@ -1,8 +1,14 @@
 #!/bin/bash
+update_void_packages_branch() {
+	if [[ -z "$void_packages_branch" && -e "$XBPS_DISTDIR" ]]; then
+		void_packages_branch="$(git -C "$XBPS_DISTDIR" symbolic-ref --short HEAD)"
+	fi
+}
 xbps_config_prep() {
 	masterdir="masterdir$musl_suffix"
 	host_target="${host_arch}${musl_suffix}"
-	[ "$host_arch" != "$arch" ] && cross_target="${arch}${musl_suffix}"
+	[ "$host_arch" != "$arch" ] && cross_target="${arch}${musl_suffix}" #|| cross_target=""
+	build_target="${cross_target:-$host_target}"
 	[ "$build_chroot_preserve" ] || build_chroot_preserve="none"
 	pkgs_build=(${extra_build_pkgs[@]})
 	if [ "$void_packages_privkeyfile" ]; then
@@ -14,8 +20,10 @@ xbps_config_prep() {
 			void_packages_privkeyfile=""
 		fi
 	fi
+	pkg_sum_file="srcpkg-checksums~" # under void-packages - "$base_dir"/.srcpkg-checksums
 	XBPS_DISTFILES_MIRROR="$mirror"
 	[ "$XBPS_DISTDIR" ] || XBPS_DISTDIR="void-packages"
+	update_void_packages_branch
 }
 setup_xbps_static() {
 	cmd_exists xbps-uhelper && return
@@ -58,8 +66,6 @@ setup_xbps_src_conf() {
 	fi
 	$write_config && echo -e "$xbps_src_config" > etc/conf || :
 }
-# Returns void-packages clone branch name; e.g. "master"
-branch_of_void_packages() { git -C "$XBPS_DISTDIR" symbolic-ref --short HEAD; }
 # Returns void-packages clone status; e.g. "up-to-date", "behind", "ahead" or "diverged"
 status_of_void_packages() {
 	local a=$1 b=$2 # e.g. master v.s. origin/master
@@ -78,7 +84,7 @@ status_of_void_packages() {
 	fi
 }
 update_void_packages() {
-	local branch="$(branch_of_void_packages)"
+	update_void_packages_branch
 	if ! $void_packages_shallow; then
 		log "Pulling updates to local void-packages clone..."
 		git -C "$XBPS_DISTDIR" pull && return
@@ -86,7 +92,7 @@ update_void_packages() {
 		warn "Couldn't pull updates to void-packages clone; trying shallow method..."
 	else
 		log "Pulling updates to local void-packages shallow clone..."
-		git -C "$XBPS_DISTDIR" fetch --depth 1 # origin $branch:$branch
+		git -C "$XBPS_DISTDIR" fetch --depth 1
 	fi
 
 	if [[ "$(git -C "$XBPS_DISTDIR" status -s)" ]]; then
@@ -94,6 +100,7 @@ update_void_packages() {
 		return
 	fi
 
+	local branch="$void_packages_branch"
 	local origin="origin/$branch"
 	local status="$(status_of_void_packages $branch $origin)"
 	case "$status" in
@@ -128,12 +135,13 @@ setup_void_packages() {
 
 		log "Creating a ${msg_extra}local clone of $void_packages..."
 		git clone ${git_extra[@]} $void_packages "$XBPS_DISTDIR"
+		update_void_packages_branch
 	else
 		update_void_packages
 	fi
 
 	if [ "$rootfs_dir" ]; then
-		$sudo sed "s/@VOID_PACKAGES_BRANCH@/$(branch_of_void_packages)/" -i "$rootfs_dir"/setup.sh
+		$sudo sed "s/@VOID_PACKAGES_BRANCH@/$void_packages_branch/" -i "$rootfs_dir"/setup.sh
 	fi
 }
 check_pkg_updates() {
@@ -163,9 +171,30 @@ print_build_config() {
   masterdir:    $masterdir
   host target:  $host_target
   cross target: ${cross_target:-<none>}
+  build target: $build_target
   packages:     ${pkgs_to_build:-<none>}
   chroot:       $build_chroot_preserve
 "
+}
+pkg_hash_up_to_date() {
+	local pkg="$1" # e.g. "ModemManager"
+	local sha256sum="$(sha256sum srcpkgs/$pkg/template | cut -d' ' -f1)"
+	local entry_name="$pkg-$build_target" # e.g. "ModemManager-aarch64-musl"
+	pkg_sum_entry="$void_packages_branch:$entry_name:$sha256sum" # e.g. "master:<entry_name>:<sha256sum>"
+	grep -q "$pkg_sum_entry" "$pkg_sum_file"
+}
+# Stores a srcpkg's branch, name, build_target & template checksum in .srcpkg-checksums
+update_pkg_hash() {
+	if [ -e "$pkg_sum_file" ]; then
+		local entry_prefix="$(echo "$pkg_sum_entry" | awk -F: 'BEGIN {OFS=FS} {print $1,$2,$3}')"
+		if grep "^$entry_prefix" "$pkg_sum_file"; then
+			sed "s/^$entry_prefix:.*/$pkg_sum_entry/" -i "$pkg_sum_file"
+		else
+			echo "$pkg_sum_entry" >> "$pkg_sum_file"
+		fi
+	else
+		echo "$pkg_sum_entry" > "$pkg_sum_file"
+	fi
 }
 build_packages() {
 	[ "$1" ] && pkgs_build=($@)
@@ -197,10 +226,12 @@ build_packages() {
 	#check_pkg_updates
 
 	# build packages
-	# TODO: Make sure somehow that we don't keep building packages that are already up-to-date?
-	# - Do this by checking matching version against /packages/**/*.xbps?
-	# - Perhaps store a checksum of srcpkgs/$pkg and check against later?
 	for pkg in ${pkgs_build[@]}; do
+		if pkg_hash_up_to_date $pkg; then
+			log "Skipping '$pkg' compilation as an up-to-date package for $build_target exists!"
+			continue
+		fi
+
 		if [ "$cross_target" ]; then
 			log "Cross-compiling extra package '$pkg' for $cross_target..."
 			./xbps-src -m $masterdir -a $cross_target pkg $pkg
@@ -208,6 +239,8 @@ build_packages() {
 			log "Compiling extra package '$pkg' for $host_target..."
 			./xbps-src -m $masterdir pkg $pkg
 		fi
+
+		update_pkg_hash
 	done
 
 	$chdir && popd >/dev/null || :
