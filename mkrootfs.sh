@@ -16,6 +16,7 @@ COLOR_RESET="\e[0m"
 # Runtime vars
 ###############
 config="config.custom.sh"
+config_overrides=()
 base_dir="$(readlink -f "$(dirname "$0")")"
 host_arch="$(uname -m)" # e.g. "x86_64"
 qemu_arch="" # e.g. "aarch64" / "arm"
@@ -34,7 +35,7 @@ usernames=()
 # Functions
 ############
 die() { echo -e "$1" 1>&2; exit 1; }
-usage() { die "usage: $0 [-c alternate_config.sh] [-B] [-N]"; }
+usage() { die "usage: $0 [-a alternate_arch] [-B] [-c alternate_config.sh] [-N]"; }
 error() { die "${COLOR_RED}ERROR: $1${COLOR_RESET}"; }
 log() { echo -e "${COLOR_BLUE}>>${COLOR_RESET} $1"; }
 warn() { echo -e "${COLOR_YELLOW}WARN: $1${COLOR_RESET}" 1>&2; }
@@ -46,10 +47,11 @@ get_rootfs_mounts() { grep "$rootfs_dir" /proc/mounts | awk '{print $2}' || :; }
 run_script() { [ -e "$base_dir/mkrootfs.$1.sh" ] && . "$base_dir/mkrootfs.$1.sh" || :; }
 copy_script() { [ -e "$base_dir/mkrootfs.$1.sh" ] && $sudo cp "$base_dir/mkrootfs.$1.sh" "$rootfs_dir"/ || :; }
 parse_args() {
-	while getopts ":c:NB" OPT; do
+	while getopts ":a:c:NB" OPT; do
 		case "$OPT" in
-			c) config=$OPTARG ;;
+			a) config_overrides+=("arch=$OPTARG") ;;
 			B) build_extra_pkgs=false ;;
+			c) config=$OPTARG ;;
 			N) unset COLOR_GREEN COLOR_BLUE COLOR_RED COLOR_RESET ;;
 			*) usage ;;
 		esac
@@ -60,6 +62,9 @@ config_prep() {
 	cd "$base_dir"
 	. config.sh
 	[ -r "$config" ] && . "$config" || config="config.sh"
+	for override in ${config_overrides[@]}; do
+		eval "$override" # e.g. "arch=armv7l"
+	done
 	echo " ${SUPPORTED_ARCHES[@]} " | grep -q " $arch " || error "Target architecture '$arch' is invalid!"
 	if [ "$arch" = "i686" ]; then
 		$musl && error "$arch doesn't have a musl rootfs variant available!"

@@ -18,8 +18,9 @@ After this `./deploy.sh` can be ran to deploy the rootfs to an Android device.
 ## Usage
 ### mkrootfs.sh
 Optional arguments
-* `-c alternate_config.sh`: Choose extra config file other than the `config.custom.sh` default
+* `-a arch`: Choose an architecture other than the one defined in `config*.sh`; see [supported architectures](#supported-architectures) above for choices
 * `-B`: Don't build extra packages if specified
+* `-c alternate_config.sh`: Choose extra config file other than the `config.custom.sh` default
 * `-N`: Don't color output if specified
 ### deploy.sh
 Optional arguments
