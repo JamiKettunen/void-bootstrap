@@ -16,6 +16,9 @@
 # static xbps install
 /xbps-static
 
+# common alternate work dir
+/work
+
 # all image files
 /*.img
 
