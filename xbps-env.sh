@@ -11,15 +11,6 @@ xbps_config_prep() {
 	build_target="${cross_target:-$host_target}"
 	[ "$build_chroot_preserve" ] || build_chroot_preserve="none"
 	pkgs_build=(${extra_build_pkgs[@]})
-	if [ "$void_packages_privkeyfile" ]; then
-		void_packages_privkeyfile="$(readlink -f "$void_packages_privkeyfile")"
-		if [ -r "$void_packages_privkeyfile" ]; then
-			export GIT_SSH_COMMAND="ssh -i $void_packages_privkeyfile -o StrictHostKeyChecking=no"
-		else
-			warn "Private key file '$(basename "$void_packages_privkeyfile")' for void-packages not found; ignoring..."
-			void_packages_privkeyfile=""
-		fi
-	fi
 	pkg_sum_file="srcpkg-checksums~" # under void-packages - "$base_dir"/.srcpkg-checksums
 	XBPS_DISTFILES_MIRROR="$mirror"
 	[ "$XBPS_DISTDIR" ] || XBPS_DISTDIR="void-packages"

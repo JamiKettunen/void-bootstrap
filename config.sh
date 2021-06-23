@@ -124,9 +124,6 @@ void_packages_branch=""
 # Should the repo be cloned/updated with --depth 1? (true|false)
 void_packages_shallow=true
 
-# Path to an optional SSH private key file used for cloning/updating a private repo
-void_packages_privkeyfile=""
-
 # Void package build chroot preservation options:
 # "none"   -> don't preserve compilation masterdir environments
 # "ccache" -> preserve only ccache from previous runs (recommended)
