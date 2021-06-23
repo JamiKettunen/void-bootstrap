@@ -100,15 +100,34 @@ droid_wait_device() {
 	[ "$mode" = "recovery" ] && device="$(adb shell getprop ro.product.device)" || :
 }
 droid_deploy_recovery() {
+	local par_target=false
+	if adb shell test -e /dev/block/bootdevice/by-name/$target; then
+		par_target=true
+		local par_name="$target"
+		local blk_target="/dev/block/bootdevice/by-name/$target"
+	fi
+
 	if ! $overwrite && adb shell test -e $target; then
 		read -erp ">> Overwrite existing $target (y/N)? " ans
 		[[ "${ans^^}" != "Y"* ]] && exit 0
 	fi
 
+	$par_target && target="/tmp/$target.img" || :
+
 	log "Transferring as $(basename $target)..."
 	adb push rootfs.img $target
-	log "Resizing rootfs on device to $resize_gb GiB..."
-	adb shell "resize2fs $target ${resize_gb}G"
+
+	if $par_target; then
+		log "Writing rootfs image using dd..."
+		adb shell "dd if=$target of=$blk_target bs=4m && rm $target"
+
+		target="$blk_target"
+		log "Resizing rootfs to fit device's $par_name partition..."
+		adb shell "resize2fs $target"
+	else
+		log "Resizing rootfs on device to $resize_gb GiB..."
+		adb shell "resize2fs $target ${resize_gb}G"
+	fi
 }
 fastboot_get_pars() {
 	fastboot getvar all 2>&1 | grep -Po 'partition-type:\K.*(?=:)'
@@ -169,7 +188,7 @@ droid_flash() {
 	$reboot && droid_reboot || :
 }
 nbd_prepare() {
-	local pid="$(pgrep -f "nbd-server -C $PWD/nbd/config")"
+	local pid="$(pgrep -f "nbd-server -C $PWD/nbd/config" | head -1)"
 	if [ "$pid" ]; then
 		if ! $force_kill_nbd; then
 			read -erp ">> Stop the still-running nbd-server (pid $pid) (Y/n)? " ans

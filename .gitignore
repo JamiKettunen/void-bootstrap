@@ -1,8 +1,8 @@
 # downloaded rootfs tarballs
 /tarballs
 
-# rootfs images (.img*)
-/images
+# rootfs images
+/images/*.img*
 
 # local nbd config
 /nbd/config
@@ -19,7 +19,8 @@
 # all image files
 /*.img
 
-# all hidden files except .gitignore
+# all hidden files except .gitignore & .keep
 .*
 !.gitignore
+!.keep
 
