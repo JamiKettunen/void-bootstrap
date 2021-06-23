@@ -186,8 +186,8 @@ pkg_hash_up_to_date() {
 # Stores a srcpkg's branch, name, build_target & template checksum in .srcpkg-checksums
 update_pkg_hash() {
 	if [ -e "$pkg_sum_file" ]; then
-		local entry_prefix="$(echo "$pkg_sum_entry" | awk -F: 'BEGIN {OFS=FS} {print $1,$2,$3}')"
-		if grep "^$entry_prefix" "$pkg_sum_file"; then
+		local entry_prefix="$(echo "$pkg_sum_entry" | awk -F: 'BEGIN {OFS=FS} {print $1,$2}')"
+		if grep -q "^$entry_prefix" "$pkg_sum_file"; then
 			sed "s/^$entry_prefix:.*/$pkg_sum_entry/" -i "$pkg_sum_file"
 		else
 			echo "$pkg_sum_entry" >> "$pkg_sum_file"
