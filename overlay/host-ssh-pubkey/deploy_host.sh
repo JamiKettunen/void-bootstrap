@@ -5,7 +5,7 @@ host_ssh_pubkey() {
 		$HOME/.ssh/id_rsa.pub
 	)
 
-	for user in ${usernames[@]}; do
+	for user in $usernames; do
 		local user_home="home/$user"
 		[ "$user" = "root" ] && user_home="root"
 		local ssh_dir="$rootfs_dir"/$user_home/.ssh

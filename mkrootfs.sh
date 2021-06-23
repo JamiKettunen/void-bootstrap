@@ -313,6 +313,7 @@ prepare_bootstrap() {
 	extra_install_pkgs="${extra_install_pkgs[@]}"
 	enable_sv="${enable_sv[@]}"
 	disable_sv="${disable_sv[@]}"
+	usernames="${usernames[@]}"
 	users_groups_common="${users_groups_common[@]}"
 	users_groups_common="${users_groups_common// /,}"
 	$sudo cp "$base_dir"/setup.sh.in "$rootfs_dir"/setup.sh
@@ -330,6 +331,7 @@ prepare_bootstrap() {
 		-e "s|@ENABLE_SV@|$enable_sv|g" \
 		-e "s|@DISABLE_SV@|$disable_sv|g" \
 		-e "s|@HOSTNAME@|$hostname|g" \
+		-e "s|@USERNAMES@|$usernames|g" \
 		-e "s|@USERS_PW_DEFAULT@|$users_pw_default|g" \
 		-e "s|@USERS_PW_ENCRYPTION@|${users_pw_encryption^^}|g" \
 		-e "s|@USERS_GROUPS_COMMON@|$users_groups_common|g" \
@@ -382,7 +384,7 @@ apply_overlays() {
 			$sudo rm "$rootfs_dir"/deploy.sh
 		fi
 		if [ -e "$rootfs_dir"/home/ALL ]; then
-			for user in ${usernames[@]}; do
+			for user in $usernames; do
 				# TODO: also cp to /root?
 				[ "$user" = "root" ] && continue
 				$sudo cp -r "$rootfs_dir"/home/ALL/. "$rootfs_dir"/home/$user/
@@ -395,7 +397,7 @@ fix_user_perms() {
 	[ $user_count -gt 0 ] || return 0
 
 	log "Fixing home folder ownership for $user_count user(s)..."
-	for user in ${usernames[@]}; do
+	for user in $usernames; do
 		[ "$user" = "root" ] && continue
 		run_on_rootfs_shell "chown -R $user: /home/$user"
 	done
