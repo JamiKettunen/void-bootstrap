@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 # HACK: Fixes GDM not starting as of 2021-06-17
 # due to an incorrect rpath in cross-compiled gnome-shell-40.2_1
