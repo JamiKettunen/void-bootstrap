@@ -130,10 +130,6 @@ setup_void_packages() {
 	else
 		update_void_packages
 	fi
-
-	if [ "$rootfs_dir" ]; then
-		$sudo sed "s/@VOID_PACKAGES_BRANCH@/$void_packages_branch/" -i "$rootfs_dir"/setup.sh
-	fi
 }
 check_pkg_updates() {
 	[ "$1" ] && pkgs_build=($@)

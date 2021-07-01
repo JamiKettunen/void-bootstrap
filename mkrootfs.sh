@@ -349,15 +349,24 @@ extra_pkgs_setup() {
 		$build_extra_pkgs && build_packages
 	fi
 
-	if [ "$extra_install_pkgs" ]; then
-		local binpkgs="$XBPS_DISTDIR/hostdir/binpkgs"
-		if [ -e $binpkgs ]; then
-			$sudo mkdir "$rootfs_dir"/packages
-			$sudo mount --bind $binpkgs "$rootfs_dir"/packages
-		else
-			warn "'$binpkgs' doesn't exist; please configure your extra_build_pkgs array!"
-		fi
+	[ "$extra_install_pkgs" ] || return 0 # no extra pkgs to install -> don't setup local repo
+
+	local binpkgs="$XBPS_DISTDIR/hostdir/binpkgs"
+	if [ ! -e "$binpkgs" ]; then
+		warn "'$binpkgs' doesn't exist; please configure your extra_build_pkgs array!"
+		return
 	fi
+
+	local arch_prefix="${arch}${musl_suffix}" # e.g. "aarch64-musl"
+	local repodir="$binpkgs/$void_packages_branch" # e.g. "void-packages/hostdir/binpkgs/packages/somainline"
+	if [ ! -e "$repodir/$arch_prefix-repodata" ]; then
+		warn "Repo data for $arch_prefix under $repodir not found; skipping local repo..."
+		return
+	fi
+
+	$sudo mkdir "$rootfs_dir"/packages
+	$sudo mount --bind "$binpkgs" "$rootfs_dir"/packages
+	rootfs_echo "repository=/packages/$void_packages_branch" /etc/xbps.d/localrepo.conf
 }
 apply_overlays() {
 	[ ${#overlays[@]} -gt 0 ] || return 0
@@ -427,6 +436,7 @@ teardown_pkgcache() {
 teardown_extra_pkgs() {
 	[ -e "$rootfs_dir"/packages ] || return 0
 
+	$sudo rm "$rootfs_dir"/etc/xbps.d/localrepo.conf
 	$sudo umount "$rootfs_dir"/packages
 	$sudo rmdir "$rootfs_dir"/packages
 }
