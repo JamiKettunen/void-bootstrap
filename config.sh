@@ -28,7 +28,7 @@ musl=true
 dns=()
 
 # Configure user account(s) on the Void install
-# format: '<user>[:<password_in_plain_text_or_mkpasswd_output>:<comma_separated_extra_groups>:<shell_path>]'
+# format: '<user>[:<password_in_plain_text_or_mkpasswd_output>:<comma_separated_extra_groups>:<shell_path>:<full_name>]'
 # NOTES:
 # 1. "$USER" = match host username
 # 2. root will always be on this list automatically & uses users_pw_default

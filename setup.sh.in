@@ -93,16 +93,19 @@ user_setup() {
 	log "Performing user setup..."
 	local pw_conf=""
 	while IFS="" read line; do
-		local fields=() user="" pw="$USERS_PW_DEFAULT" groups="$USERS_GROUPS_COMMON" shell="$USERS_SHELL_DEFAULT"
+		local fields=() user="" pw="$USERS_PW_DEFAULT" groups="$USERS_GROUPS_COMMON" \
+			shell="$USERS_SHELL_DEFAULT" fullname=""
 		IFS=':' read -ra fields <<< "$line"
 		user="${fields[0]}"
 		[ "${fields[1]}" ] && pw="${fields[1]}"
 		[ "$pw" ] && pw_conf+="$user:$pw\n"
 
 		[ "${fields[3]}" ] && shell="${fields[3]}"
+		[ "${fields[4]}" ] && fullname="${fields[4]}"
 		if [ "$user" = "root" ]; then
 			[ -z "$pw" ] && passwd -d root
 			[[ "$shell" && "$shell" != "/bin/sh" ]] && chsh -s $shell
+			[ "$fullname" ] && chfn -f "$fullname" root
 			continue
 		fi
 		if [ "${fields[2]}" ]; then
@@ -112,7 +115,8 @@ user_setup() {
 		local args=()
 		[ "$shell" ] && args+=(-s $shell)
 		[ "$groups" ] && args+=(-G $groups)
-		useradd -m ${args[@]} $user
+		[ "$fullname" ] && args+=(-c "$fullname")
+		useradd -m "${args[@]}" $user || error "Couldn't create new user $user!"
 	done <<< "$(</users.conf)"
 	shred -uz /users.conf
 
