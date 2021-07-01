@@ -134,31 +134,31 @@ user_setup() {
 	$USERS_SUDO_ASKPASS || nopasswd=" NOPASSWD:"
 	echo "%wheel ALL=(ALL)${nopasswd} ALL" > /etc/sudoers.d/wheel-group-members
 }
-stage2_setup() {
-	install_extra_pkgs
-	sv_setup
-	user_setup
+root_ssh_setup() {
+	$PERMIT_ROOT_LOGIN || return
 
-	if $PERMIT_ROOT_LOGIN; then
-		log "Allowing login as root via SSH..."
-		sed 's/^#PermitRootLogin.*/PermitRootLogin yes/' -i /etc/ssh/sshd_config
-	fi
+	log "Allowing login as root via SSH..."
+	sed 's/^#PermitRootLogin.*/PermitRootLogin yes/' -i /etc/ssh/sshd_config
+}
+hostname_setup() {
+	[ "$HOSTNAME" ] || return
 
-	if [ "$HOSTNAME" ]; then
-		log "Setting system hostname to $HOSTNAME..."
-		echo "$HOSTNAME" > /etc/hostname
-	fi
-
+	log "Setting system hostname to $HOSTNAME..."
+	echo "$HOSTNAME" > /etc/hostname
+}
+fix_root_perms() {
 	log "Setting /root permissions to 700 (from $(stat -c '%a' /root))..."
 	chmod 700 /root
-
+}
+run_custom_script() {
 	local custom_script="/mkrootfs.custom.sh"
-	if [ -e "$custom_script" ]; then
-		log "Running $custom_script..."
-		. "$custom_script"
-		rm "$custom_script"
-	fi
+	[ -e "$custom_script" ] || return
 
+	log "Running $custom_script..."
+	. "$custom_script"
+	rm "$custom_script"
+}
+do_cleanup() {
 	log "Removing installed orphan packages..."
 	xbps-remove -o -y
 
@@ -167,7 +167,8 @@ stage2_setup() {
 		log "Cleaning $cache_size of cached packages..."
 		rm /var/cache/xbps/*
 	fi
-
+}
+finalize_setup() {
 	if cmd_exists updatedb; then
 		log "Updating mlocate database..."
 		sudo updatedb
@@ -177,6 +178,17 @@ stage2_setup() {
 		log "Saving current time for fake-hwclock to restore on initial boot..."
 		fake-hwclock save "\$(date +'%Y-%m-%d %H:%M:%S')"
 	fi
+}
+stage2_setup() {
+	install_extra_pkgs
+	sv_setup
+	user_setup
+	root_ssh_setup
+	hostname_setup
+	fix_root_perms
+	run_custom_script
+	do_cleanup
+	finalize_setup
 }
 
 # Script
