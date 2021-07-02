@@ -76,7 +76,7 @@ unpack_img() {
 	if [[ "$IMG" = *".xz" ]]; then
 		hash pixz &>/dev/null \
 			&& pixz -kd "$IMG" rootfs.img \
-			|| unxz --keep "$IMG" rootfs.img
+			|| unxz -c "$IMG" > rootfs.img
 	elif [[ "$IMG" = *".gz" ]]; then
 		hash pigz &>/dev/null \
 			&& pigz -dc "$IMG" > rootfs.img \
