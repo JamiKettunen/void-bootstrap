@@ -17,3 +17,6 @@ xbps-install -y gnome-core pipewire \
 	gedit
 
 enable_sv gdm
+
+# Default Firefox to Wayland
+echo "MOZ_ENABLE_WAYLAND=1" >> /etc/environment
