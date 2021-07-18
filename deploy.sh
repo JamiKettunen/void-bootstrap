@@ -5,6 +5,7 @@
 IMG=""
 resize_gb="8"
 target="/data/void-rootfs.img"
+bs=4096
 nbd_target=false
 force_kill_nbd=false
 overwrite=false
@@ -15,13 +16,14 @@ reboot=true
 log() { echo ">> $1"; }
 die() { echo -e "$1" 1>&2; exit 1; }
 err() { die "ERROR: $1"; }
-usage() { die "usage: $0 [-i rootfs.img] [-s rootfs_resize_gb] [-t target_location] [-f] [-k] [-R]"; }
+usage() { die "usage: $0 [-i rootfs.img] [-s rootfs_resize_gb] [-t target_location] [-b 4096] [-f] [-k] [-R]"; }
 parse_args() {
-	while getopts ":i:s:t:fkR" OPT; do
+	while getopts ":i:s:t:b:fkR" OPT; do
 		case "$OPT" in
 			i) IMG="$OPTARG" ;;
 			s) resize_gb=$OPTARG ;;
 			t) target="$OPTARG" ;;
+			b) bs="$OPTARG" ;;
 			f) overwrite=true ;;
 			k) force_kill_nbd=true ;;
 			R) reboot=false ;;
@@ -138,6 +140,7 @@ droid_deploy_fastboot() {
        please change it via e.g. '-t system'!"
 
 	log "Flashing rootfs to device partition $target via fastboot..."
+	img2simg rootfs.img rootfs.sparse.img $bs && mv rootfs.sparse.img rootfs.img
 	fastboot flash $target rootfs.img
 }
 droid_deploy_img() {
