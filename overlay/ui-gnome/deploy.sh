@@ -11,7 +11,7 @@ xbps-install -y mesa-dri glxinfo mesa-demos                          # GPU
 xbps-install -y xorg-server-xwayland xf86-video-fbdev                # Base GUI
 
 # A small GNOME desktop with some default applications installed
-xbps-install -y gnome-core pipewire \
+xbps-install -y gnome-core \
 	gnome-tweaks gnome-terminal gnome-system-monitor gnome-screenshot \
 	gnome-disk-utility gnome-clocks gnome-calendar \
 	gedit
