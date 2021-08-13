@@ -47,11 +47,12 @@ get_rootfs_mounts() { grep "$rootfs_dir" /proc/mounts | awk '{print $2}' || :; }
 run_script() { [ -e "$base_dir/mkrootfs.$1.sh" ] && . "$base_dir/mkrootfs.$1.sh" || :; }
 copy_script() { [ -e "$base_dir/mkrootfs.$1.sh" ] && $sudo cp "$base_dir/mkrootfs.$1.sh" "$rootfs_dir"/ || :; }
 parse_args() {
-	while getopts ":a:c:NB" OPT; do
+	while getopts ":a:c:m:NB" OPT; do
 		case "$OPT" in
 			a) config_overrides+=("arch=$OPTARG") ;;
 			B) build_extra_pkgs=false ;;
 			c) config=$OPTARG ;;
+			m) config_overrides+=("musl=$OPTARG") ;;
 			N) unset COLOR_GREEN COLOR_BLUE COLOR_RED COLOR_RESET ;;
 			*) usage ;;
 		esac
