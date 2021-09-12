@@ -21,6 +21,7 @@ Optional arguments
 * `-a arch`: Choose an architecture other than the one defined in `config*.sh`; see [supported architectures](#supported-architectures) above for choices
 * `-B`: Don't build extra packages if specified
 * `-c alternate_config.sh`: Choose extra config file other than the `config.custom.sh` default
+* `-m true|false`: Choose whether to enable musl libc instead of glibc or not
 * `-N`: Don't color output if specified
 ### deploy.sh
 Optional arguments
