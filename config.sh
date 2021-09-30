@@ -67,12 +67,10 @@ hostname="voidlinux"
 # NOTE: "" = DEF_MIRROR as defined in mkrootfs.sh
 mirror=""
 
-# Extra string to append to rootfs filename
-img_name_extra=""
-
-# Format of date string appended to end of rootfs filename
+# Rootfs filename format:
+# "%a" -> architecture (e.g. "aarch64" or "aarch64-musl")
 # https://man.voidlinux.org/date
-img_date_format="%Y-%m-%d"
+img_name_format="%a-rootfs-$(date +'%Y-%m-%d').img"
 
 # Maximum size the rootfs image is expected to reach during the creation process.
 img_size="4G"

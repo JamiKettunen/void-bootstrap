@@ -458,7 +458,7 @@ finalize_setup() {
 create_image() {
 	log "Creating $img_size ext4 rootfs image..."
 	[ -e images ] || mkdir -p images
-	rootfs_img="images/${rootfs_match,,}${img_name_extra}-$(date +"$img_date_format").img" # e.g. "aarch64-musl-rootfs-2021-05-24.img"
+	rootfs_img="images/${img_name_format/\%a/$arch$musl_suffix}" # e.g. "aarch64-musl-rootfs-2021-05-24.img"
 	# TODO: F2FS / XFS filesystem support
 	mount | grep -q "$base_dir/tmpmnt" && $sudo umount tmpmnt
 	fallocate -l $img_size "$rootfs_img"
