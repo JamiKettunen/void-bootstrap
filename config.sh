@@ -73,6 +73,7 @@ mirror=""
 img_name_format="%a-rootfs-$(date +'%Y-%m-%d').img"
 
 # Maximum size the rootfs image is expected to reach during the creation process.
+# "0" = don't move build result to an image file
 img_size="4G"
 
 # Rootfs image final compression:

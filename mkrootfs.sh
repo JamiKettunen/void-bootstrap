@@ -456,6 +456,8 @@ finalize_setup() {
 	log "Rootfs creation done; final size: $rootfs_size"
 }
 create_image() {
+	[ "$img_size" != "0" ] || return 0
+
 	log "Creating $img_size ext4 rootfs image..."
 	[ -e images ] || mkdir -p images
 	rootfs_img="images/${img_name_format/\%a/$arch$musl_suffix}" # e.g. "aarch64-musl-rootfs-2021-05-24.img"
