@@ -152,4 +152,5 @@ XBPS_CCACHE="yes"
 #XBPS_CHECK_PKGS="full"
 #XBPS_DEBUG_PKGS="yes"
 XBPS_MAKEJOBS="$(nproc)" # e.g. "16" / "$(nproc)"
+XBPS_PRESERVE_PKGS=yes
 # TODO: distcc config

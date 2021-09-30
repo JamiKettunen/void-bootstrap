@@ -11,7 +11,6 @@ xbps_config_prep() {
 	build_target="${cross_target:-$host_target}"
 	[ "$build_chroot_preserve" ] || build_chroot_preserve="none"
 	pkgs_build=(${extra_build_pkgs[@]})
-	pkg_sum_file="srcpkg-checksums~" # under void-packages - "$base_dir"/.srcpkg-checksums
 	XBPS_DISTFILES_MIRROR="$mirror"
 	[ "$XBPS_DISTDIR" ] || XBPS_DISTDIR="void-packages"
 	update_void_packages_branch
@@ -47,8 +46,14 @@ setup_xbps_static() {
 }
 setup_xbps_src_conf() {
 	local xbps_src_config="# as configured in Void Bootstrap's config.sh"
-	add_if_set() { for cfg in $@; do cfg="XBPS_$cfg"; [ "${!cfg}" ] && xbps_src_config+="\n$cfg=\"${!cfg}\"" || :; done; }
-	add_if_set ALLOW_RESTRICTED CCACHE CHECK_PKGS DEBUG_PKGS DISTFILES_MIRROR MAKEJOBS
+	while read -r cfg; do
+		case "${cfg%%=*}" in
+			XBPS_DISTDIR)
+				continue ;;
+		esac
+		xbps_src_config+="\n$cfg"
+	done < <((set -o posix; set) | grep '^XBPS_')
+
 	local write_config=true
 	if [ -e etc/conf ]; then
 		local file_sum="$(sha256sum etc/conf | awk '{print $1}')"
@@ -163,26 +168,6 @@ print_build_config() {
   chroot:       $build_chroot_preserve
 "
 }
-pkg_hash_up_to_date() {
-	local pkg="$1" # e.g. "ModemManager"
-	local sha256sum="$(sha256sum srcpkgs/$pkg/template | cut -d' ' -f1)"
-	local entry_name="$pkg-$build_target" # e.g. "ModemManager-aarch64-musl"
-	pkg_sum_entry="$void_packages_branch:$entry_name:$sha256sum" # e.g. "master:<entry_name>:<sha256sum>"
-	grep -q "$pkg_sum_entry" "$pkg_sum_file"
-}
-# Stores a srcpkg's branch, name, build_target & template checksum in .srcpkg-checksums
-update_pkg_hash() {
-	if [ -e "$pkg_sum_file" ]; then
-		local entry_prefix="$(echo "$pkg_sum_entry" | awk -F: 'BEGIN {OFS=FS} {print $1,$2}')"
-		if grep -q "^$entry_prefix" "$pkg_sum_file"; then
-			sed "s/^$entry_prefix:.*/$pkg_sum_entry/" -i "$pkg_sum_file"
-		else
-			echo "$pkg_sum_entry" >> "$pkg_sum_file"
-		fi
-	else
-		echo "$pkg_sum_entry" > "$pkg_sum_file"
-	fi
-}
 build_packages() {
 	[ "$1" ] && pkgs_build=($@)
 
@@ -214,11 +199,6 @@ build_packages() {
 
 	# build packages
 	for pkg in ${pkgs_build[@]}; do
-		if pkg_hash_up_to_date $pkg; then
-			log "Skipping '$pkg' compilation as an up-to-date package for $build_target exists!"
-			continue
-		fi
-
 		if [ "$cross_target" ]; then
 			log "Cross-compiling extra package '$pkg' for $cross_target..."
 			./xbps-src -m $masterdir -a $cross_target pkg $pkg
@@ -226,8 +206,6 @@ build_packages() {
 			log "Compiling extra package '$pkg' for $host_target..."
 			./xbps-src -m $masterdir pkg $pkg
 		fi
-
-		update_pkg_hash
 	done
 
 	$chdir && popd >/dev/null || :
