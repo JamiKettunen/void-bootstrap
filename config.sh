@@ -3,7 +3,7 @@
 # Void Linux release tarballs to target
 # e.g. "current" or "20210316"
 # https://alpha.de.repo.voidlinux.org/live
-release="20210316"
+release="20210930"
 
 # Backend to use for executing scripts and commands on the rootfs; supported choices include:
 # "chroot"

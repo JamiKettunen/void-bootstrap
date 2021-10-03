@@ -182,7 +182,7 @@ fetch_rootfs() {
 		[ "$checksums" ] && break
 	done
 	local checksum="$(sha256sum "$tarball_dir/$rootfs_tarball" | awk '{print $1}')"
-	echo "$checksums" | grep -q "$rootfs_tarball.*$checksum\$" && return
+	echo "$checksums" | grep -qe "$rootfs_tarball" -e "$checksum" && return
 
 	rm "$tarball_dir/$rootfs_tarball"
 	die "Rootfs tarball checksum verification failed; please try again!"
