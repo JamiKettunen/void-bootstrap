@@ -8,7 +8,8 @@ release="20210930"
 # Backend to use for executing scripts and commands on the rootfs; supported choices include:
 # "chroot"
 # "systemd-nspawn"
-backend="chroot"
+# "" = "systemd-nspawn" if found, else "chroot"
+backend=""
 
 # Target rootfs architecture; currently available choices include:
 # "aarch64"

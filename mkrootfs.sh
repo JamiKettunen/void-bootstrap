@@ -80,6 +80,9 @@ config_prep() {
 	fi
 	$musl && musl_suffix="-musl"
 	rootfs_match="$arch$musl_suffix-ROOTFS" # musl/glibc
+	if [ -z "$backend" ]; then
+		cmd_exists systemd-nspawn && backend="systemd-nspawn" || backend="chroot"
+	fi
 	[ "$work_dir" ] || work_dir="."
 	work_dir="$(readlink -f "$work_dir")"
 	rootfs_dir="$work_dir/rootfs"
