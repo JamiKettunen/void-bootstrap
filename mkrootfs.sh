@@ -35,7 +35,7 @@ usernames=()
 # Functions
 ############
 die() { echo -e "$1" 1>&2; exit 1; }
-usage() { die "usage: $0 [-a alternate_arch] [-B] [-c alternate_config.sh] [-N]"; }
+usage() { die "usage: $0 [-a alternate_arch] [-B] [-c alternate_config.sh] [-m musl_enable] [-N]"; }
 error() { die "${COLOR_RED}ERROR: $1${COLOR_RESET}"; }
 log() { echo -e "${COLOR_BLUE}>>${COLOR_RESET} $1"; }
 warn() { echo -e "${COLOR_YELLOW}WARN: $1${COLOR_RESET}" 1>&2; }
