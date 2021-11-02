@@ -47,15 +47,16 @@ get_rootfs_mounts() { grep "$rootfs_dir" /proc/mounts | awk '{print $2}' || :; }
 run_script() { [ -e "$base_dir/mkrootfs.$1.sh" ] && . "$base_dir/mkrootfs.$1.sh" || :; }
 copy_script() { [ -e "$base_dir/mkrootfs.$1.sh" ] && $sudo cp "$base_dir/mkrootfs.$1.sh" "$rootfs_dir"/ || :; }
 parse_args() {
-	while getopts ":a:c:m:NB" OPT; do
-		case "$OPT" in
-			a) config_overrides+=("arch=$OPTARG") ;;
-			B) build_extra_pkgs=false ;;
-			c) config=$OPTARG ;;
-			m) config_overrides+=("musl=$OPTARG") ;;
-			N) unset COLOR_GREEN COLOR_BLUE COLOR_RED COLOR_RESET ;;
+	while [ $# -gt 0 ]; do
+		case $1 in
+			-a|--arch) config_overrides+=("arch=$2"); shift ;;
+			-B|--no-build-pkgs) build_extra_pkgs=false ;;
+			-c|--config) config="$2"; shift ;;
+			-m|--musl) config_overrides+=("musl=$2"); shift ;;
+			-N|--no-color) unset COLOR_GREEN COLOR_BLUE COLOR_RED COLOR_RESET ;;
 			*) usage ;;
 		esac
+		shift
 	done
 }
 config_prep() {
@@ -63,7 +64,7 @@ config_prep() {
 	cd "$base_dir"
 	. config.sh
 	[ -r "$config" ] && . "$config" || config="config.sh"
-	for override in ${config_overrides[@]}; do
+	for override in "${config_overrides[@]}"; do
 		eval "$override" # e.g. "arch=armv7l"
 	done
 	echo " ${SUPPORTED_ARCHES[@]} " | grep -q " $arch " || error "Target architecture '$arch' is invalid!"
