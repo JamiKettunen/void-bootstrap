@@ -171,7 +171,7 @@ echo
 fetch_rootfs() {
 	rootfs_tarball="$(wget "$mirror/live/$release/" -t 3 -qO - | grep $rootfs_match | cut -d'"' -f2)"
 	log "Latest tarball: $rootfs_tarball"
-	[ "$rootfs_tarball" ] || die "Please check your arch ($arch) and mirror ($mirror)!"
+	[ "$rootfs_tarball" ] || error "Please check your arch ($arch) and mirror ($mirror)!"
 	local tarball_url="$mirror/live/$release/$rootfs_tarball"
 	[ -e "$tarball_dir/$rootfs_tarball" ] && return
 
@@ -189,7 +189,7 @@ fetch_rootfs() {
 	echo "$checksums" | grep -qe "$rootfs_tarball" -e "$checksum" && return
 
 	rm "$tarball_dir/$rootfs_tarball"
-	die "Rootfs tarball checksum verification failed; please try again!"
+	error "Rootfs tarball checksum verification failed; please try again!"
 }
 umount_rootfs_special() {
 	for mount in ${SPECIAL_MOUNTS[@]}; do
