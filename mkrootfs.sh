@@ -363,7 +363,12 @@ extra_pkgs_setup() {
 	fi
 
 	local arch_prefix="${arch}${musl_suffix}" # e.g. "aarch64-musl"
-	local repodir="$binpkgs/$void_packages_branch" # e.g. "void-packages/hostdir/binpkgs/packages/somainline"
+	local repodir="$binpkgs" # e.g. "void-packages/hostdir/binpkgs/packages"
+	local reposuffix # e.g. "/somainline"
+	if [ "$void_packages_branch" != "master" ]; then
+		reposuffix="/$void_packages_branch"
+		repodir+="$reposuffix"
+	fi
 	if [ ! -e "$repodir/$arch_prefix-repodata" ]; then
 		warn "Repo data for $arch_prefix under $repodir not found; skipping local repo..."
 		return
@@ -371,7 +376,7 @@ extra_pkgs_setup() {
 
 	$sudo mkdir "$rootfs_dir"/packages
 	$sudo mount --bind "$binpkgs" "$rootfs_dir"/packages
-	rootfs_echo "repository=/packages/$void_packages_branch" /etc/xbps.d/localrepo.conf
+	rootfs_echo "repository=/packages$reposuffix" /etc/xbps.d/localrepo.conf
 }
 apply_overlays() {
 	[ ${#overlays[@]} -gt 0 ] || return 0
