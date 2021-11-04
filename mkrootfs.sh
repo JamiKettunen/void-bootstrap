@@ -192,8 +192,9 @@ fetch_rootfs() {
 	error "Rootfs tarball checksum verification failed; please try again!"
 }
 umount_rootfs_special() {
+	local rootfs_mounts="$(get_rootfs_mounts)"
 	for mount in ${SPECIAL_MOUNTS[@]}; do
-		$sudo umount -R "$rootfs_dir"/$mount
+		echo "$rootfs_mounts" | grep -q "/$mount" && $sudo umount -R "$rootfs_dir"/$mount
 	done
 }
 umount_rootfs() {
