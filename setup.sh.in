@@ -33,8 +33,8 @@ arch="$(xbps-uhelper arch)" # e.g. "aarch64-musl"
 ############
 error() { echo -e "${COLOR_RED}ERROR: $1${COLOR_RESET}" 1>&2; exit 1; }
 log() { echo -e "${COLOR_GREEN}(rootfs) ${COLOR_BLUE}>>${COLOR_RESET} $1"; }
-enable_sv() { for sv in $@; do ln -s /etc/sv/$sv /etc/runit/runsvdir/default/; done; }
-disable_sv() { for sv in $@; do touch /etc/sv/$sv/down; done; }
+enable_sv() { local svd; for sv in $@; do svd=/etc/sv/$sv; [ -e $svd ] && ln -s $svd /etc/runit/runsvdir/default/ || error "Service '$sv' doesn't exist!"; done; }
+disable_sv() { local svd; for sv in $@; do svd=/etc/sv/$sv; [ -e $svd ] && touch $svd/down || error "Service '$sv' doesn't exist!"; done; }
 runas() { sudo -u $1 -i bash -c "$2"; }
 cmd_exists() { command -v $1 >/dev/null; }
 mirror_setup() {
@@ -76,17 +76,17 @@ pkgs_setup() {
 	[ "$BASE_PKGS$EXTRA_PKGS" ] || return
 
 	log "Installing additional configured packages..."
-	xbps-install -Sy $BASE_PKGS $EXTRA_PKGS
+	xbps-install -Sy $BASE_PKGS $EXTRA_PKGS || exit 1
 }
 sv_setup() {
 	if [ "$ENABLE_SV" ]; then
 		log "Enabling runit services $ENABLE_SV..."
-		enable_sv $ENABLE_SV
+		enable_sv $ENABLE_SV || exit 1
 	fi
 
 	if [ "$DISABLE_SV" ]; then
 		log "Disabling runit services $DISABLE_SV..."
-		disable_sv $DISABLE_SV
+		disable_sv $DISABLE_SV || exit 1
 	fi
 }
 user_setup() {
