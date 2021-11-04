@@ -388,7 +388,7 @@ apply_overlays() {
 		$sudo cp -r "$overlay/$folder"/* "$rootfs_dir"
 
 		if [ -e "$rootfs_dir"/deploy_host.sh ]; then
-			. "$rootfs_dir"/deploy_host.sh
+			(. "$rootfs_dir"/deploy_host.sh) || error "Failed to run deploy_host.sh!"
 			$sudo rm "$rootfs_dir"/deploy_host.sh
 		fi
 		if [ -e "$rootfs_dir"/deploy.sh ]; then
