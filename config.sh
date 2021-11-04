@@ -80,7 +80,7 @@ img_size="4G"
 # none -> keep as raw rootfs.img
 # xz   -> create xz compressed rootfs.img.xz
 # gz   -> create gz compressed rootfs.img.gz
-img_compress="xz"
+img_compress="none"
 
 # Main working directory of script; can be e.g. "/tmp/void-bootstrap" if you have memory to spare
 # NOTE: "" = match mkrootfs.sh directory
