@@ -454,6 +454,7 @@ finalize_setup() {
 	$sudo rm "$rootfs_dir"/setup.sh
 	teardown_pkgcache
 	teardown_extra_pkgs
+	teardown_custom_packages
 	fix_user_perms
 
 	if [ "$backend" != "systemd-nspawn" ]; then
@@ -506,9 +507,15 @@ create_image() {
 
 	log "All done! Final image size: $(du -h "$rootfs_img" | awk '{print $1}')"
 }
+cleanup() {
+	if ${custom_packages_setup:-false}; then
+		teardown_custom_packages
+	fi
+}
 
 # Script
 #########
+trap cleanup EXIT
 run_script pre
 parse_args $@
 config_prep

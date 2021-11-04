@@ -12,8 +12,10 @@ xbps_config_prep() {
 	[ "$build_chroot_preserve" ] || build_chroot_preserve="none"
 	pkgs_build=(${extra_build_pkgs[@]})
 	XBPS_DISTFILES_MIRROR="$mirror"
-	[ "$XBPS_DISTDIR" ] || XBPS_DISTDIR="void-packages"
+	[ "$XBPS_DISTDIR" ] || XBPS_DISTDIR="$base_dir/void-packages"
+	[[ "$XBPS_DISTDIR" != "/"* ]] && XBPS_DISTDIR="$base_dir/$XBPS_DISTDIR"
 	update_void_packages_branch
+	custom_packages_setup=${custom_packages_setup:-false}
 }
 setup_xbps_static() {
 	cmd_exists xbps-uhelper && return
@@ -117,6 +119,44 @@ update_void_packages() {
 	git -C "$XBPS_DISTDIR" reset --hard $origin
 	#git -C "$XBPS_DISTDIR" clean -dfx
 }
+merge_custom_packages() {
+	local packages="$base_dir"/packages
+	if ! [[ -e "$packages"/custom-shlibs ||
+	        $(find -L "$packages"/* -type f -name 'template' | wc -l) -gt 0 ||
+	        $(find "$packages"/patches/* -type f | wc -l) -gt 0 ]]; then
+		return # no custom packages/shlibs/patches to setup
+	fi
+
+	if [ "$(git -C "$XBPS_DISTDIR" status -s)" ]; then
+		error "Local void-packages clone not clean; refusing to merge custom packages!"
+	fi
+
+	local branch="$void_packages_branch"
+	local origin="origin/$branch"
+	case "$(status_of_void_packages $branch $origin)" in
+		"diverged")
+			local total_commmits=$(git -C "$XBPS_DISTDIR" rev-list --count HEAD) # e.g. 1 on shallow clones
+			if [ $total_commmits -gt 1 ]; then
+				error "Refusing to merge custom packages onto diverged $branch with more than one commit to $origin!"
+			fi
+			;;
+		"ahead") error "Refusing to merge custom packages to $branch which is ahead of $origin!" ;;
+	esac
+
+	log "Merging custom packages and patches into void-packages..."
+	if "$packages"/merge.sh "$XBPS_DISTDIR"; then
+		custom_packages_setup=true
+	else
+		error "Merge of custom packages failed!"
+	fi
+}
+teardown_custom_packages() {
+	$custom_packages_setup || return 0
+
+	git -C "$XBPS_DISTDIR" restore .
+	git -C "$XBPS_DISTDIR" clean -xfd -e hostdir* -e masterdir* -e etc/conf -e .xbps-checkvers-*.plist >/dev/null
+	custom_packages_setup=false
+}
 setup_void_packages() {
 	if [ ! -e "$XBPS_DISTDIR" ]; then
 		local git_extra=()
@@ -135,6 +175,7 @@ setup_void_packages() {
 	else
 		update_void_packages
 	fi
+	merge_custom_packages
 }
 check_pkg_updates() {
 	[ "$1" ] && pkgs_build=($@)
@@ -165,6 +206,7 @@ print_build_config() {
   cross target: ${cross_target:-<none>}
   build target: $build_target
   packages:     ${pkgs_to_build:-<none>}
+  custom:       $custom_packages_setup
   chroot:       $build_chroot_preserve
 "
 }
