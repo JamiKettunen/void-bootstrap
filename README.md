@@ -41,3 +41,13 @@ The following scripts can be created to be sourced by `mkrootfs.sh` if they exis
 * `mkrootfs.pre.sh`: Executed before any of the other functions; can be used for custom function overrides and such
 * `mkrootfs.custom.sh`: Executed inside the rootfs before cleanup operations; can be used to script more complex environments if `config.sh` doesn't cut it
 * `mkrootfs.post.sh`: Executed after rootfs image creation (and compression); can be used for local CI build artifact uploads or such actions
+
+## DST Root CA X3 certificate verification failed
+This can happen while starting to build extra packages in case your host system has broken certificates (e.g. Arch).
+
+It can be fixed by importing the `ISRG Root X1` cert and deleting the expired `DST Root CA X3` one like so:
+```bash
+curl -LO https://letsencrypt.org/certs/isrgrootx1.pem
+sudo trust anchor --store isrgrootx1.pem
+sudo rm isrgrootx1.pem /etc/ssl/certs/2e5ac55d.0
+```
