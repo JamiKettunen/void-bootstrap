@@ -1,0 +1,45 @@
+From 0eddcc3e45c8a7beceb316a82967a1dfa340623b Mon Sep 17 00:00:00 2001
+From: Jami Kettunen <jami.kettunen@somainline.org>
+Date: Wed, 20 Apr 2022 23:58:22 +0300
+Subject: [PATCH 2/2] update-check: add git_index var to track non-tip commits
+ in feed
+
+---
+ Manual.md                               | 3 +++
+ common/xbps-src/shutils/update_check.sh | 6 +++++-
+ 2 files changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/Manual.md b/Manual.md
+index a0b6883352..4928ebada1 100644
+--- a/Manual.md
++++ b/Manual.md
+@@ -849,6 +849,9 @@ automatically set if either `_commit` or `_githash` are set; when set
+ `version` automatically gets the value of `${_commit}${_githash}` and
+ `pattern` defaults to `<id>\K.*commit\/\K.*(?=<\/id>)`. `site` is
+ guessed for GitHub and GitLab with `_branch` defaulting to `main`.
++`git_index` can be set to track the Nth commit from top instead of the
++latest one, note that this only applies to the top 20 (GitHub) or top
++40 (GitLab) commits from the history.
+ 
+ - `single_directory` can be set to disable
+ detecting directory containing one version of sources in url,
+diff --git a/common/xbps-src/shutils/update_check.sh b/common/xbps-src/shutils/update_check.sh
+index c146e86836..3e97a49715 100644
+--- a/common/xbps-src/shutils/update_check.sh
++++ b/common/xbps-src/shutils/update_check.sh
+@@ -209,7 +209,11 @@ update_check() {
+     tr _ . |
+     {
+         if [ -n "$git" ]; then
+-            head -1
++            if [ -n "$git_index" ]; then
++                head -n$git_index | tail -n1
++            else
++                head -n1
++            fi
+         else
+             sort -Vu
+         fi
+-- 
+2.38.1
+

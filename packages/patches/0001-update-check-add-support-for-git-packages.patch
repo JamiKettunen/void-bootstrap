@@ -1,0 +1,101 @@
+From ca884fb6c6a40163e1059c4282d74f6140ff001c Mon Sep 17 00:00:00 2001
+From: Jami Kettunen <jami.kettunen@protonmail.com>
+Date: Mon, 31 May 2021 01:02:35 +0300
+Subject: [PATCH 1/2] update-check: add support for git packages.
+
+---
+ Manual.md                               |  8 ++++++
+ common/xbps-src/shutils/update_check.sh | 36 +++++++++++++++++++++----
+ 2 files changed, 39 insertions(+), 5 deletions(-)
+
+diff --git a/Manual.md b/Manual.md
+index fa552f65ba..a0b6883352 100644
+--- a/Manual.md
++++ b/Manual.md
+@@ -842,6 +842,14 @@ versions.  Example: `ignore="*b*"`
+ - `version` is the version number used to compare against
+ upstream versions. Example: `version=${version//./_}`
+ 
++- `git` can be set to treat the `site` as feed of commits for the
++project; in this case results are not sorted by version and only the
++first match is compared with the current `version`. `git` is
++automatically set if either `_commit` or `_githash` are set; when set
++`version` automatically gets the value of `${_commit}${_githash}` and
++`pattern` defaults to `<id>\K.*commit\/\K.*(?=<\/id>)`. `site` is
++guessed for GitHub and GitLab with `_branch` defaulting to `main`.
++
+ - `single_directory` can be set to disable
+ detecting directory containing one version of sources in url,
+ then searching new version in adjacent directories.
+diff --git a/common/xbps-src/shutils/update_check.sh b/common/xbps-src/shutils/update_check.sh
+index 85e419cb81..c146e86836 100644
+--- a/common/xbps-src/shutils/update_check.sh
++++ b/common/xbps-src/shutils/update_check.sh
+@@ -1,7 +1,7 @@
+ # vim: set ts=4 sw=4 et:
+ 
+ update_check() {
+-    local i p url pkgurlname rx found_version consider
++    local i p url pkgurlname rx found_version consider git
+     local update_override=$XBPS_SRCPKGDIR/$XBPS_TARGET_PKG/update
+     local original_pkgname=$pkgname
+     local pkgname=$sourcepkg
+@@ -19,6 +19,21 @@ update_check() {
+         fi
+         return 0
+     fi
++    if [ -n "${_commit}${_githash}" ]; then
++        : ${pattern:='<id>\K.*commit\/\K.*(?=<\/id>)'}
++        version=${_commit}${_githash}
++        git=yes
++        if [ -z "$site" ]; then
++            : ${_branch:=main}
++            distfiles=(${distfiles[@]})
++            distfiles="${distfiles[0]}"
++            case "$distfiles" in
++                *//gitlab.*|*//source.puri.sm/*)
++                    site="${distfiles%/-/*}/commits/${_branch}?format=atom" ;;
++                *github.com*) site="${distfiles%/archive/*}/commits/${_branch}.atom" ;;
++            esac
++        fi
++    fi
+ 
+     if ! type curl >/dev/null 2>&1; then
+         echo "ERROR: cannot find \`curl' executable!"
+@@ -192,7 +207,13 @@ update_check() {
+         fetchedurls[$url]=yes
+     done |
+     tr _ . |
+-    sort -Vu |
++    {
++        if [ -n "$git" ]; then
++            head -1
++        else
++            sort -Vu
++        fi
++    } |
+     {
+         grep . || echo "NO VERSION found for $original_pkgname" 1>&2
+     } |
+@@ -214,10 +235,15 @@ update_check() {
+             esac
+         done
+         if $consider; then
+-            xbps-uhelper cmpver "$original_pkgname-${version}_1" \
+-                "$original_pkgname-$(printf %s "$found_version" | tr - .)_1"
+-            if [ $? = 255 ]; then
++            if [ -n "$git" ]; then
++                [ "$version" = "$found_version" ] && return
+                 echo "${original_pkgname}-${version} -> ${original_pkgname}-${found_version}"
++            else
++                xbps-uhelper cmpver "$original_pkgname-${version}_1" \
++                    "$original_pkgname-$(printf %s "$found_version" | tr - .)_1"
++                if [ $? = 255 ]; then
++                    echo "${original_pkgname}-${version} -> ${original_pkgname}-${found_version}"
++                fi
+             fi
+         fi
+     done
+-- 
+2.38.1
+
