@@ -150,11 +150,12 @@ merge_custom_packages() {
 		error "Merge of custom packages failed!"
 	fi
 }
+gen_clean_excludes() { for i in $@; do echo "-e $i "; done; }
 teardown_custom_packages() {
 	$custom_packages_setup || return 0
 
 	git -C "$XBPS_DISTDIR" restore .
-	git -C "$XBPS_DISTDIR" clean -xfd -e hostdir* -e masterdir* -e etc/conf -e .xbps-checkvers-*.plist >/dev/null
+	git -C "$XBPS_DISTDIR" clean -xfd $(gen_clean_excludes hostdir* masterdir* etc/conf .xbps-checkvers-*.plist) >/dev/null
 	custom_packages_setup=false
 }
 setup_void_packages() {
