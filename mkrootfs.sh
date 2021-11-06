@@ -27,6 +27,7 @@ rootfs_tarball="" # e.g. "void-aarch64-musl-ROOTFS-20210218.tar.xz"
 tarball_dir="$base_dir/tarballs"
 chroot="" # e.g. "chroot" or "systemd-nspawn -q -D"
 build_extra_pkgs=true
+extra_pkg_steps_only=()
 missing_deps=()
 user_count=0
 sudo="sudo" # prefix for commands requiring root user privileges; unset if running as root
@@ -35,7 +36,7 @@ usernames=()
 # Functions
 ############
 die() { echo -e "$1" 1>&2; exit 1; }
-usage() { die "usage: $0 [-a alternate_arch] [-B] [-c alternate_config.sh] [-m musl_enable] [-N]"; }
+usage() { die "usage: $0 [-a alternate_arch] [-B] [-b] [-c alternate_config.sh] [-f] [-m musl_enable] [-N] [-u]"; }
 error() { die "${COLOR_RED}ERROR: $1${COLOR_RESET}"; }
 log() { echo -e "${COLOR_BLUE}>>${COLOR_RESET} $1"; }
 warn() { echo -e "${COLOR_YELLOW}WARN: $1${COLOR_RESET}" 1>&2; }
@@ -51,9 +52,12 @@ parse_args() {
 		case $1 in
 			-a|--arch) config_overrides+=("arch=$2"); shift ;;
 			-B|--no-build-pkgs) build_extra_pkgs=false ;;
+			-b|--build-pkgs-only) unset extra_install_pkgs; build_extra_pkgs=true; extra_pkg_steps_only+=(build) ;;
 			-c|--config) config="$2"; shift ;;
+			-f|--force-rebuild) config_overrides+=("unset XBPS_PRESERVE_PKGS") ;;
 			-m|--musl) config_overrides+=("musl=$2"); shift ;;
 			-N|--no-color) unset COLOR_GREEN COLOR_BLUE COLOR_RED COLOR_RESET ;;
+			-u|--check-updates-only) extra_pkg_steps_only+=(check) ;;
 			*) usage ;;
 		esac
 		shift
@@ -379,6 +383,28 @@ extra_pkgs_setup() {
 	$sudo mount --bind "$binpkgs" "$rootfs_dir"/packages
 	rootfs_echo "repository=/packages$reposuffix" /etc/xbps.d/localrepo.conf
 }
+extra_pkgs_only_setup() {
+	[ ${#extra_pkg_steps_only[@]} -gt 0 ] || return 0
+
+	local build=false check=false
+	[[ " ${extra_pkg_steps_only[*]} " = *" build "* ]] && build=true
+	[[ " ${extra_pkg_steps_only[*]} " = *" check "* ]] && check=true
+	[ ${#extra_build_pkgs[@]} -ne 0 ] || error "No extra packages to build/check specified!"
+
+	if $check; then
+		build_extra_pkgs=false
+		extra_pkgs_setup
+		check_pkg_updates
+	fi
+	if $build; then
+		if $build_extra_pkgs; then
+			extra_pkgs_setup
+		else
+			build_packages
+		fi
+	fi
+	exit 0
+}
 apply_overlays() {
 	[ ${#overlays[@]} -gt 0 ] || return 0
 
@@ -522,6 +548,7 @@ parse_args $@
 config_prep
 check_deps
 print_config
+extra_pkgs_only_setup
 fetch_rootfs
 unpack_rootfs
 setup_pkgcache

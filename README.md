@@ -20,9 +20,12 @@ After this `./deploy.sh` can be ran to deploy the rootfs to an Android device.
 Optional arguments
 * `-a arch`: Choose an architecture other than the one defined in `config*.sh`; see [supported architectures](#supported-architectures) above for choices
 * `-B`: Don't build extra packages if specified
+* `-b`: Only build extra packages instead of creating a rootfs
 * `-c alternate_config.sh`: Choose extra config file other than the `config.custom.sh` default
+* `-f`: Force rebuild of extra packages even if an up-to-date `.xbps` package is found
 * `-m true|false`: Choose whether to enable musl libc instead of glibc or not
 * `-N`: Don't color output if specified
+* `-u`: Only check updates to extra packages instead of creating a rootfs
 ### deploy.sh
 Optional arguments
 * `-i rootfs.img`: Specify a rootfs image path to deploy
