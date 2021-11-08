@@ -52,7 +52,7 @@ parse_args() {
 		case $1 in
 			-a|--arch) config_overrides+=("arch=$2"); shift ;;
 			-B|--no-build-pkgs) build_extra_pkgs=false ;;
-			-b|--build-pkgs-only) unset extra_install_pkgs; build_extra_pkgs=true; extra_pkg_steps_only+=(build) ;;
+			-b|--build-pkgs-only) build_extra_pkgs=true; extra_pkg_steps_only+=(build) ;;
 			-c|--config) config="$2"; shift ;;
 			-f|--force-rebuild) config_overrides+=("unset XBPS_PRESERVE_PKGS") ;;
 			-m|--musl) config_overrides+=("musl=$2"); shift ;;
@@ -391,6 +391,7 @@ extra_pkgs_only_setup() {
 	[[ " ${extra_pkg_steps_only[*]} " = *" check "* ]] && check=true
 	[ ${#extra_build_pkgs[@]} -ne 0 ] || error "No extra packages to build/check specified!"
 
+	unset extra_install_pkgs
 	if $check; then
 		build_extra_pkgs=false
 		extra_pkgs_setup
