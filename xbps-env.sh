@@ -144,9 +144,8 @@ merge_custom_packages() {
 	esac
 
 	log "Merging custom packages and patches into void-packages..."
-	if "$packages"/merge.sh "$XBPS_DISTDIR"; then
-		custom_packages_setup=true
-	else
+	custom_packages_setup=true
+	if ! "$packages"/merge.sh "$XBPS_DISTDIR"; then
 		error "Merge of custom packages failed!"
 	fi
 }
@@ -154,7 +153,8 @@ gen_clean_excludes() { for i in $@; do echo "-e $i "; done; }
 teardown_custom_packages() {
 	$custom_packages_setup || return 0
 
-	git -C "$XBPS_DISTDIR" checkout .
+	log "Cleaning up custom packages and patches from void-packages..."
+	git -C "$XBPS_DISTDIR" checkout . &>/dev/null
 	git -C "$XBPS_DISTDIR" clean -xfd $(gen_clean_excludes hostdir* masterdir* etc/conf .xbps-checkvers-*.plist) >/dev/null
 	custom_packages_setup=false
 }
