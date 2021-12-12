@@ -2,11 +2,7 @@
 Customize & create Void Linux rootfs images.
 
 ## Supported architectures
-* `aarch64`
-* `armv6l`
-* `armv7l`
-* `x86_64`
-* `i686`
+`aarch64`, `armv6l`, `armv7l`, `x86_64` and `i686`
 
 ## Building
 Create a `config.custom.sh`, tweak options defined in [`config.sh`](config.sh) as you please & simply run the [`mkrootfs.sh`](mkrootfs.sh) script:
