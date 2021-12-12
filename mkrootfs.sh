@@ -105,7 +105,7 @@ check_deps() {
 		runtime_deps+=(qemu-$qemu_arch-static)
 		[ "$backend" != "systemd-nspawn" ] && runtime_deps+=(update-binfmts)
 	fi
-	[ ${#extra_build_pkgs[@]} -gt 0 ] && runtime_deps+=(git)
+	[ ${#extra_build_pkgs[@]} -gt 0 ] && runtime_deps+=(git patch)
 
 	for dep in ${runtime_deps[@]}; do
 		cmd_exists $dep || missing_deps+=($dep)
