@@ -119,6 +119,15 @@ check_deps() {
    $missing_deps
 "
 }
+setup_binfmt() {
+	[ "$qemu_arch" ] || return 0
+
+	if [ "$backend" = "systemd-nspawn" ]; then
+		systemctl -q is-active systemd-binfmt || $sudo systemctl start systemd-binfmt
+	elif ! update-binfmts --display | grep -q "^qemu-$qemu_arch-static .*enabled"; then
+		error "Please re-check your binfmt-support setup (enabled qemu-$qemu_arch-static interpreter wasn't detected)!"
+	fi
+}
 # Fold while offsetting ouput lines after the first one by $1 spaces.
 fold_offset() {
 	local fold_at=80
@@ -249,8 +258,6 @@ chroot_setup() {
 	done
 
 	if [ "$qemu_arch" ]; then
-		local binfmt_list="$(update-binfmts --display)"
-		[ "$binfmt_list" ] || error "Please re-check your binfmt-support setup!"
 		$sudo cp $(cmd_path qemu-$qemu_arch-static) "$rootfs_dir"/usr/bin/
 	fi
 }
@@ -301,9 +308,6 @@ users_conf_setup() {
 }
 prepare_bootstrap() {
 	if [ "$backend" = "systemd-nspawn" ]; then
-		if [ "$qemu_arch" ]; then
-			systemctl -q is-active systemd-binfmt || $sudo systemctl start systemd-binfmt
-		fi
 		chroot="systemd-nspawn -q --timezone=off"
 	else
 		chroot_setup
@@ -548,6 +552,7 @@ run_script pre
 parse_args $@
 config_prep
 check_deps
+setup_binfmt
 print_config
 extra_pkgs_only_setup
 fetch_rootfs
