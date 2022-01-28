@@ -540,9 +540,12 @@ create_image() {
 	log "All done! Final image size: $(du -h "$rootfs_img" | awk '{print $1}')"
 }
 cleanup() {
+	teardown_pkgcache
+	teardown_extra_pkgs
 	if ${custom_packages_setup:-false}; then
 		teardown_custom_packages
 	fi
+	umount_rootfs
 }
 
 # Script
