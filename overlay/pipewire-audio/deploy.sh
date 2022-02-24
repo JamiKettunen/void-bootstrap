@@ -8,7 +8,4 @@ fi
 
 # Setup ALSA bits
 mkdir -p /etc/alsa/conf.d
-ln -s /usr/share/alsa/alsa.conf.d/50-pipewire.conf /etc/alsa/conf.d/
-ln -s /usr/share/alsa/alsa.conf.d/99-pipewire-default.conf /etc/alsa/conf.d/
-
-# TODO: JACK replacement (conditionally)?
+ln -s /usr/share/alsa/alsa.conf.d/{50-pipewire,99-pipewire-default}.conf /etc/alsa/conf.d/
