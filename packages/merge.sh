@@ -3,6 +3,7 @@ set -e
 merge_root="$(readlink -f "$(dirname "$0")")"
 void_packages="$1"
 void_shlibs="$void_packages/common/shlibs"
+void_virtuals="$void_packages/etc/defaults.virtual"
 void_srcpkgs="$void_packages/srcpkgs"
 
 if [[ ! -f "$void_shlibs" || ! -d "$void_srcpkgs" ]]; then
@@ -39,6 +40,20 @@ merge_shlibs() {
 		fi
 	done < <(echo "$custom_shlibs_lines")
 }
+merge_virtuals() {
+	custom_virtuals="$merge_root/custom-virtuals"
+	[ -e "$custom_virtuals" ] || return 0
+
+	custom_virtuals_lines="$(grep -Ev '^(#|$)' "$custom_virtuals")"
+	echo "Merging $(echo "$custom_virtuals_lines" | wc -l) custom virtuals..."
+	while IFS="" read virtual; do
+		vpkgname="${virtual% *}" # e.g. "java-environment"
+		if grep -Eq "^$vpkgname " "$void_virtuals"; then
+			sed "/^$vpkgname\ /d" -i "$void_virtuals"
+		fi
+		echo "$virtual" >> "$void_virtuals"
+	done < <(echo "$custom_virtuals_lines")
+}
 merge_patches() {
 	[ -e "$merge_root"/patches ] || return 0
 	patches_count=$(find "$merge_root"/patches/* -type f | wc -l)
@@ -57,4 +72,5 @@ merge_patches() {
 
 merge_pkgs
 merge_shlibs
+merge_virtuals
 merge_patches
