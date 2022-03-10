@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 merge_root="$(readlink -f "$(dirname "$0")")"
 void_packages="$1"
 void_shlibs="$void_packages/common/shlibs"
@@ -26,7 +27,8 @@ merge_shlibs() {
 	custom_shlibs="$merge_root/custom-shlibs"
 	[ -e "$custom_shlibs" ] || return 0
 
-	echo "Merging $(wc -l < "$custom_shlibs") custom shlibs..."
+	custom_shlibs_lines="$(grep -Ev '^(#|$)' "$custom_shlibs")"
+	echo "Merging $(echo "$custom_shlibs_lines" | wc -l) custom shlibs..."
 	while IFS="" read shlib; do
 		soname="${shlib% *}" # e.g. "libwlroots.so.7"
 		pkgfull="${shlib##* }" # e.g. "wlroots-legacy-0.12.0_1"
@@ -35,7 +37,7 @@ merge_shlibs() {
 			sed "/^$soname\ /d" -i "$void_shlibs"
 			echo "$shlib" >> "$void_shlibs"
 		fi
-	done <<< "$(<"$custom_shlibs")"
+	done < <(echo "$custom_shlibs_lines")
 }
 merge_patches() {
 	[ -e "$merge_root"/patches ] || return 0
