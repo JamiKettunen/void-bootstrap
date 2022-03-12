@@ -29,11 +29,18 @@ musl=true
 dns=()
 
 # Configure user account(s) on the Void install
-# format: '<user>[:<password_in_plain_text_or_mkpasswd_output>:<comma_separated_extra_groups>:<shell_path>:<full_name>]'
+# FORMAT:
+# 1. login name
+# 2. optional password (plain text or encrypted)
+# 3. numerical user/group ID
+# 4. extra groups (comma separated)
+# 5. shell path
+# 6. full name / comment
 # NOTES:
 # 1. "$USER" = match host username
-# 2. root will always be on this list automatically & uses users_pw_default
-# 3. Plain text password CANNOT contain ':' or '|' -> use mkpasswd instead
+# 2. If no password is defined it defaults to users_pw_default
+# 3. root will always be on this list automatically & uses users_pw_default
+# 4. Plain text password CANNOT contain ':' or '|' -> use mkpasswd instead
 # See "man mkpasswd" and "man chpasswd"
 # https://docs.voidlinux.org/config/users-and-groups.html#default-groups
 users=()

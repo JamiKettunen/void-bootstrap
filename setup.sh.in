@@ -93,28 +93,34 @@ user_setup() {
 	log "Performing user setup..."
 	local pw_conf=""
 	while IFS="" read line; do
-		local fields=() user="" pw="$USERS_PW_DEFAULT" groups="$USERS_GROUPS_COMMON" \
+		local fields=() user="" pw="$USERS_PW_DEFAULT" id="" groups="$USERS_GROUPS_COMMON" \
 			shell="$USERS_SHELL_DEFAULT" fullname=""
 		IFS=':' read -ra fields <<< "$line"
 		user="${fields[0]}"
 		[ "${fields[1]}" ] && pw="${fields[1]}"
+		[ "${fields[2]}" ] && id="${fields[2]}"
 		[ "$pw" ] && pw_conf+="$user:$pw\n"
 
-		[ "${fields[3]}" ] && shell="${fields[3]}"
-		[ "${fields[4]}" ] && fullname="${fields[4]}"
+		[ "${fields[4]}" ] && shell="${fields[4]}"
+		[ "${fields[5]}" ] && fullname="${fields[5]}"
 		if [ "$user" = "root" ]; then
 			[ -z "$pw" ] && passwd -d root
-			[[ "$shell" && "$shell" != "/bin/sh" ]] && chsh -s $shell
-			[ "$fullname" ] && chfn -f "$fullname" root
+			if [[ "$shell" && "$shell" != "/bin/sh" ]]; then
+				chsh -s $shell || exit 1
+			fi
+			if [ "$fullname" ]; then
+				chfn -f "$fullname" root || exit 1
+			fi
 			continue
 		fi
-		if [ "${fields[2]}" ]; then
-			[ "$groups" ] && groups+=",${fields[2]}" || groups="${fields[2]}"
+		if [ "${fields[3]}" ]; then
+			[ "$groups" ] && groups+=",${fields[3]}" || groups="${fields[3]}"
 		fi
 
 		local args=()
-		[ "$shell" ] && args+=(-s $shell)
+		[ "$id" ] && args+=(-u $id)
 		[ "$groups" ] && args+=(-G $groups)
+		[ "$shell" ] && args+=(-s $shell)
 		[ "$fullname" ] && args+=(-c "$fullname")
 		useradd -m "${args[@]}" $user || error "Couldn't create new user $user!"
 	done <<< "$(</users.conf)"
