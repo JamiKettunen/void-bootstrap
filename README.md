@@ -5,11 +5,13 @@ Customize & create Void Linux rootfs images.
 `aarch64`, `armv6l`, `armv7l`, `x86_64` and `i686`
 
 ## Building
-Create a `config.custom.sh`, tweak options defined in [`config.sh`](config.sh) as you please & simply run the [`mkrootfs.sh`](mkrootfs.sh) script:
+Create a `config.custom.sh`, in it tweak options defined in [`config.sh`](config.sh) as you please & simply run the [`mkrootfs.sh`](mkrootfs.sh) script:
 ```
 $ ./mkrootfs.sh
 ```
 After this `./deploy.sh` can be ran to deploy the rootfs to an Android device.
+
+A `config.local.sh` is also sourced in case it exists to utilize e.g. a local-only `distcc` setup.
 
 ## Usage
 ### mkrootfs.sh
