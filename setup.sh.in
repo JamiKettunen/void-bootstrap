@@ -133,7 +133,8 @@ user_setup() {
 
 	local nopasswd=""
 	$USERS_SUDO_ASKPASS || nopasswd=" NOPASSWD:"
-	echo "%wheel ALL=(ALL)${nopasswd} ALL" > /etc/sudoers.d/wheel-group-members
+	echo "%wheel ALL=(ALL)${nopasswd} ALL" > /etc/sudoers.d/wheel
+	chmod 400 /etc/sudoers.d/wheel
 }
 root_ssh_setup() {
 	$PERMIT_ROOT_LOGIN || return
