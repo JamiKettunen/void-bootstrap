@@ -4,13 +4,12 @@ if [ -e /var/service/rmtfs ]; then
 	sv check rmtfs >/dev/null || exit 1
 fi
 
-#OPTS='--log-file=/dev/null'
-DUAL_SIM=false
+#OPTS='--log-file=/dev/null' # disable all logging by default
 [ -r conf ] && . ./conf
 if [ -r /proc/device-tree/compatible ] && grep -q 'qcom,' /proc/device-tree/compatible; then
 	qmicli="qmicli -d qrtr://0 -p"
-	if $DUAL_SIM; then
-		AID=${AID:-$($qmicli --uim-get-card-status | grep -E "([A-Z0-9]{2}:){15}[A-Z0-9]{2}" | xargs)}
+	if [ -n "$DUAL_SIM" ]; then
+		: ${AID:=$($qmicli --uim-get-card-status | grep -E "([A-Z0-9]{2}:){15}[A-Z0-9]{2}" | xargs)}
 		[ "$AID" ] || exit 1
 		$qmicli --uim-change-provisioning-session="slot=1,activate=yes,session-type=primary-gw-provisioning,aid=$AID" >/dev/null
 	fi
