@@ -65,6 +65,7 @@ parse_args() {
 }
 config_prep() {
 	[ $EUID -eq 0 ] && unset sudo
+	unset XBPS_DISTDIR
 	cd "$base_dir"
 	. config.sh
 	[ -r "$config" ] && . "$config" || config="config.sh"
