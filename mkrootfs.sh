@@ -86,7 +86,7 @@ config_prep() {
 	if [ "$host_arch" != "$arch" ]; then
 		case "$arch" in
 			"armv"*) qemu_arch="arm" ;;
-			"i686") qemu_arch="i386" ;;
+			"i686") [ "$host_arch" != "x86_64" ] && qemu_arch="i386" ;;
 			*) qemu_arch="$arch" ;;
 		esac
 	fi
