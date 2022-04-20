@@ -73,7 +73,13 @@ config_prep() {
 	for override in "${config_overrides[@]}"; do
 		eval "$override" # e.g. "arch=armv7l"
 	done
-	echo " ${SUPPORTED_ARCHES[@]} " | grep -q " $arch " || error "Target architecture '$arch' is invalid!"
+	if ! echo " ${SUPPORTED_ARCHES[@]} " | grep -q " $arch "; then
+		local error_msg="Target architecture '$arch' is invalid! Valid choices include:\n\n"
+		for arch in "${SUPPORTED_ARCHES[@]}"; do
+			error_msg+="   $arch\n"
+		done
+		error "$error_msg"
+	fi
 	if [ "$arch" = "i686" ]; then
 		$musl && error "$arch doesn't have a musl rootfs variant available!"
 	fi
