@@ -26,6 +26,7 @@ Optional arguments:
 * `-m true|false`: Choose whether to enable musl libc instead of glibc or not
 * `-N`: Don't color output if specified
 * `-u`: Only check updates to extra packages instead of creating a rootfs
+* `-t`: Only teardown any custom changes made to the cloned void-packages repo
 ### deploy.sh
 Flashes the built image to a device.
 

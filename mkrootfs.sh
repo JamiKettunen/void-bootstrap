@@ -58,6 +58,7 @@ parse_args() {
 			-m|--musl) config_overrides+=("musl=$2"); shift ;;
 			-N|--no-color) unset COLOR_GREEN COLOR_BLUE COLOR_RED COLOR_RESET ;;
 			-u|--check-updates-only) extra_pkg_steps_only+=(check) ;;
+			-t|--teardown-void-packages) extra_pkg_steps_only+=(teardown) ;;
 			*) usage ;;
 		esac
 		shift
@@ -402,6 +403,11 @@ extra_pkgs_only_setup() {
 	local build=false check=false
 	[[ " ${extra_pkg_steps_only[*]} " = *" build "* ]] && build=true
 	[[ " ${extra_pkg_steps_only[*]} " = *" check "* ]] && check=true
+	if [[ " ${extra_pkg_steps_only[*]} " = *" teardown "* && -e "$XBPS_DISTDIR" ]]; then
+		custom_packages_setup=true
+		teardown_custom_packages
+		exit 0
+	fi
 	[ ${#extra_build_pkgs[@]} -ne 0 ] || error "No extra packages to build/check specified!"
 
 	unset extra_install_pkgs
