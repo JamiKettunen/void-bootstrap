@@ -244,6 +244,7 @@ setup_pkgcache() {
 	[ "$pkgcache_dir" ] || return 0
 
 	log "Preparing package cache for use..."
+	pkgcache_dir="$(readlink -f "$pkgcache_dir")"
 	[ -e "$pkgcache_dir" ] || mkdir -p "$pkgcache_dir"
 	$sudo mkdir "$rootfs_dir"/pkgcache
 	$sudo mount --bind "$pkgcache_dir" "$rootfs_dir"/pkgcache
