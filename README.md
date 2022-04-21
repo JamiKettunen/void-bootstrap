@@ -13,7 +13,9 @@ After this `./deploy.sh` can be ran to deploy the rootfs to an Android device.
 
 ## Usage
 ### mkrootfs.sh
-Optional arguments
+Builds the OS image.
+
+Optional arguments:
 * `-a arch`: Choose an architecture other than the one defined in `config*.sh`; see [supported architectures](#supported-architectures) above for choices
 * `-B`: Don't build extra packages if specified
 * `-b`: Only build extra packages instead of creating a rootfs
@@ -23,7 +25,9 @@ Optional arguments
 * `-N`: Don't color output if specified
 * `-u`: Only check updates to extra packages instead of creating a rootfs
 ### deploy.sh
-Optional arguments
+Flashes the built image to a device.
+
+Optional arguments:
 * `-i rootfs.img`: Specify a rootfs image path to deploy
 * `-s rootfs_resize_gb`: Gigabytes to resize the deployed image to, defaults to `8`
 * `-t target_location`: Rootfs target location on the device
