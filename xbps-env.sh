@@ -18,7 +18,7 @@ xbps_config_prep() {
 	custom_packages_setup=${custom_packages_setup:-false}
 }
 setup_xbps_static() {
-	cmd_exists xbps-uhelper && return
+	cmd_exists xbps-uhelper && return 0
 	[ -e xbps-static ] || mkdir xbps-static
 
 	local checksums="$(wget "$mirror/static/sha256sums.txt" -t 3 -qO -)" checksum=""

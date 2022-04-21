@@ -472,7 +472,7 @@ teardown_pkgcache() {
 
 	if ! cmd_exists python3; then
 		warn "Not attempting to clean old version copies from cached packages as python3 wasn't found!"
-		return
+		return 0
 	fi
 
 	# FIXME: This appears to not work outside chroot(?) with static xbps
