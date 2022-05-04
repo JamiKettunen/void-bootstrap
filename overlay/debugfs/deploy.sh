@@ -1,3 +1,3 @@
 #!/bin/bash
-mkdir /d
-echo 'debugfs		/d	debugfs	defaults                0       0' >> /etc/fstab
+ln -s /sys/kernel/debug /d
+echo 'debugfs		/sys/kernel/debug	debugfs	defaults                0       0' >> /etc/fstab
