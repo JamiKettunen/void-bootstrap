@@ -301,7 +301,7 @@ mkrootfs_conf_setup() {
 	for pkg in ${ignorepkg[@]}; do
 		mkrootfs_conf+="ignorepkg=$pkg\n"
 	done
-	for pattern in ${noextract[@]}; do
+	for pattern in "${noextract[@]}"; do
 		mkrootfs_conf+="noextract=$pattern\n"
 	done
 	write_conf "$mkrootfs_conf" /etc/xbps.d/mkrootfs.conf
