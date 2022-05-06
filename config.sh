@@ -108,10 +108,12 @@ ignorepkg=()
 
 # Files to avoid extracting from all packages
 # These are automatically added to rm_files
+# NOTE: All patterns with globs (*) have to be quoted!
 noextract=()
 
 # File patterns to remove from the rootfs
 # Automatically contains everything from noextract
+# NOTE: All patterns with globs (*) have to be quoted!
 rm_files=()
 
 # Packages to remove from rootfs
