@@ -132,7 +132,10 @@ setup_binfmt() {
 	[ "$qemu_arch" ] || return 0
 
 	if [ "$backend" = "systemd-nspawn" ]; then
-		systemctl -q is-active systemd-binfmt || $sudo systemctl start systemd-binfmt
+		if ! systemctl -q is-active systemd-binfmt; then
+			$sudo systemctl start systemd-binfmt
+			systemctl -q is-active systemd-binfmt || error "Couldn't start 'systemd-binfmt' service; please see 'systemctl status systemd-binfmt'!"
+		fi
 	elif ! update-binfmts --display | grep -q "^qemu-$qemu_arch-static .*enabled"; then
 		error "Please re-check your binfmt-support setup (enabled qemu-$qemu_arch-static interpreter wasn't detected)!"
 	fi
