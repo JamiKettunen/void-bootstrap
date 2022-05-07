@@ -58,7 +58,16 @@ base_setup() {
 	fi
 	if [ "$RM_FILES" ]; then
 		log "Removing some unneeded files..."
-		rm -f $RM_FILES
+		local rm_patterns=() rm_excludes=() pattern
+		# FIXME: doesn't support spaces!
+		for pattern in $RM_FILES; do
+			if [[ "$pattern" != "!"* ]]; then
+				rm_patterns+=("$pattern")
+			else
+				rm_excludes+=(-not -path "${pattern:1}")
+			fi
+		done
+		find "${rm_patterns[@]}" -maxdepth 0 "${rm_excludes[@]}" -exec rm -rf {} + 2>/dev/null
 	fi
 
 	log "Upgrading all base packages..."
