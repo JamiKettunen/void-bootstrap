@@ -43,6 +43,7 @@ warn() { echo -e "${COLOR_YELLOW}WARN: $1${COLOR_RESET}" 1>&2; }
 cmd_path() { command -v $1; }
 cmd_exists() { cmd_path $1 >/dev/null; }
 escape_color() { local c="COLOR_$1"; printf '%q' "${!c}" | sed "s/^''$//"; }
+disable_color() { unset COLOR_GREEN COLOR_BLUE COLOR_RED COLOR_RESET; }
 rootfs_echo() { echo -e "$1" | $sudo tee "$rootfs_dir/$2" >/dev/null; }
 get_rootfs_mounts() { grep "$rootfs_dir" /proc/mounts | awk '{print $2}' || :; }
 run_script() { [ -e "$base_dir/mkrootfs.$1.sh" ] && . "$base_dir/mkrootfs.$1.sh" || :; }
@@ -56,7 +57,7 @@ parse_args() {
 			-c|--config) config="$2"; shift ;;
 			-f|--force-rebuild) config_overrides+=("unset XBPS_PRESERVE_PKGS") ;;
 			-m|--musl) config_overrides+=("musl=$2"); shift ;;
-			-N|--no-color) unset COLOR_GREEN COLOR_BLUE COLOR_RED COLOR_RESET ;;
+			-N|--no-color) disable_color ;;
 			-u|--check-updates-only) extra_pkg_steps_only+=(check) ;;
 			-t|--teardown-void-packages) extra_pkg_steps_only+=(teardown) ;;
 			*) usage ;;
@@ -65,6 +66,7 @@ parse_args() {
 	done
 }
 config_prep() {
+	[ -t 1 ] || disable_color # avoid writing color escape codes to piped stdout
 	[ $EUID -eq 0 ] && unset sudo
 	unset XBPS_DISTDIR
 	cd "$base_dir"
