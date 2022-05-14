@@ -36,7 +36,36 @@ usernames=()
 # Functions
 ############
 die() { echo -e "$1" 1>&2; exit 1; }
-usage() { die "usage: $0 [-a alternate_arch] [-B] [-b] [-c alternate_config.sh] [-f] [-m musl_enable] [-N] [-u]"; }
+usage() {
+	die "void-bootstrap - Customize & create Void Linux rootfs images.
+
+USAGE:
+    $0 [FLAGS] [OPTIONS]...
+
+FLAGS:
+    -B, --no-build-pkgs  Don't build any configured extra_build_pkgs array packages
+    -u, --check-updates-only
+                         Only check updates to configured extra_build_pkgs array packages
+                         instead of creating a rootfs
+    -b, --build-pkgs-only
+                         Only build configured extra_build_pkgs array packages instead of
+                         creating a rootfs
+    -t, --teardown-void-packages
+                         Only cleanup all non-committed changes from XBPS_DISTDIR instead
+                         of creating a rootfs
+    -f, --force-rebuild  Force rebuild of configured extra_build_pkgs array packages
+                         even if an up-to-date local package is found
+    -N, --no-color       Don't add color to log messages, done automatically when piping
+                         the output from this script
+    -h, --help           Show this screen
+
+OPTIONS:
+    -a, --arch    Set target rootfs architecture, supported choices:
+                  ${SUPPORTED_ARCHES[*]}
+    -c, --config  Choose an alternative config file, defaults to config.custom.sh
+    -m, --musl    Choose whether or not to use musl over glibc as the C standard library,
+                  true or false"
+}
 error() { die "${COLOR_RED}ERROR: $1${COLOR_RESET}"; }
 log() { echo -e "${COLOR_BLUE}>>${COLOR_RESET} $1"; }
 warn() { echo -e "${COLOR_YELLOW}WARN: $1${COLOR_RESET}" 1>&2; }
