@@ -162,13 +162,19 @@ check_deps() {
 setup_binfmt() {
 	[ "$qemu_arch" ] || return 0
 
+	local binfmt_backend="binfmt-support" binfmt_procfs="/proc/sys/fs/binfmt_misc"
 	if [ "$backend" = "systemd-nspawn" ]; then
+		binfmt_backend="systemd-binfmt"
 		if ! systemctl -q is-active systemd-binfmt; then
 			$sudo systemctl start systemd-binfmt
 			systemctl -q is-active systemd-binfmt || error "Couldn't start 'systemd-binfmt' service; please see 'systemctl status systemd-binfmt'!"
 		fi
-	elif ! update-binfmts --display | grep -q "^qemu-$qemu_arch-static .*enabled"; then
-		error "Please re-check your binfmt-support setup (enabled qemu-$qemu_arch-static interpreter wasn't detected)!"
+	fi
+
+	# TODO: detailed error reports on what might be wrong with binfmt_misc
+	binfmt_procfs=$(find $binfmt_procfs/* -exec grep -sl "interpreter.*qemu-$qemu_arch-static" {} + | head -n1)
+	if [ -z "$binfmt_procfs" ] || ! grep -q '^enabled$' $binfmt_procfs; then
+		error "Please re-check your '$binfmt_backend' setup (enabled qemu-$qemu_arch-static interpreter wasn't detected)!"
 	fi
 }
 # Fold while offsetting ouput lines after the first one by $1 spaces.
