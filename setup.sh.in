@@ -54,7 +54,7 @@ base_setup() {
 
 	if [ "$RM_PKGS" ]; then
 		log "Removing some unneeded packages..."
-		xbps-remove -y $RM_PKGS
+		xbps-remove -y $RM_PKGS || exit 1
 	fi
 	if [ "$RM_FILES" ]; then
 		log "Removing some unneeded files..."
