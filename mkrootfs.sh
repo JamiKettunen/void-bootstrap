@@ -28,7 +28,6 @@ tarball_dir="$base_dir/tarballs"
 chroot="" # e.g. "chroot" or "systemd-nspawn -q -D"
 build_extra_pkgs=true
 extra_pkg_steps_only=()
-missing_deps=()
 user_count=0
 sudo="sudo" # prefix for commands requiring root user privileges; unset if running as root
 usernames=()
@@ -105,7 +104,7 @@ config_prep() {
 	for override in "${config_overrides[@]}"; do
 		eval "$override" # e.g. "arch=armv7l"
 	done
-	if ! echo " ${SUPPORTED_ARCHES[@]} " | grep -q " $arch "; then
+	if ! echo " ${SUPPORTED_ARCHES[*]} " | grep -q " $arch "; then
 		local error_msg="Target architecture '$arch' is invalid! Valid choices include:\n\n"
 		for arch in "${SUPPORTED_ARCHES[@]}"; do
 			error_msg+="   $arch\n"
@@ -133,13 +132,13 @@ config_prep() {
 	[ -d "$rootfs_dir" ] || mkdir -p "$rootfs_dir"
 	[ "$mirror" ] || mirror="$DEF_MIRROR"
 	[ "$img_compress" ] || img_compress="none"
-	user_count=$(printf '%s\n' "${users[@]}" | grep -v ^root | wc -l)
-	printf '%s\n' "${users[@]}" | grep -q ^root || users+=(root)
+	user_count=$(printf '%s\n' "${users[@]}" | grep -cv '^root$')
+	printf '%s\n' "${users[@]}" | grep -q '^root$' || users+=(root)
 	[[ $((${#extra_build_pkgs[@]}+${#extra_install_pkgs[@]})) -gt 0 ]] || build_extra_pkgs=false
 	. xbps-env.sh
 }
 check_deps() {
-	runtime_deps=($backend wget xz mkfs.ext4 $sudo)
+	local runtime_deps=($backend wget xz mkfs.ext4 $sudo) missing_deps=()
 	[ "$img_compress" = "gz" ] && runtime_deps+=(gzip)
 	if [ "$qemu_arch" ]; then
 		runtime_deps+=(qemu-$qemu_arch-static)
@@ -150,13 +149,11 @@ check_deps() {
 	for dep in ${runtime_deps[@]}; do
 		cmd_exists $dep || missing_deps+=($dep)
 	done
-	local error_count=${#missing_deps[@]}
-	[ $error_count -eq 0 ] && return
+	[ ${#missing_deps[@]} -eq 0 ] && return
 
-	missing_deps="${missing_deps[@]}"
-	error "$error_count missing runtime dependencies found:
+	error "${#missing_deps[@]} missing runtime dependencies found:
 
-   $missing_deps
+   ${missing_deps[*]}
 "
 }
 setup_binfmt() {
@@ -206,7 +203,7 @@ else
 	echo "  pkgcache: none"
 fi
 if [ ${#overlays[@]} -gt 0 ]; then
-	echo "  overlays: $(fold_offset 12 "${overlays[@]}")"
+	echo "  overlays: $(fold_offset 12 "${overlays[*]}")"
 else
 	echo "  overlays: none"
 fi
@@ -217,7 +214,7 @@ Extra packages:
 "
 if [ ${#extra_install_pkgs[@]} -gt 0 ]; then
 	echo "  build:    $build_extra_pkgs
-  install:  $(fold_offset 12 "${extra_install_pkgs[@]}")"
+  install:  $(fold_offset 12 "${extra_install_pkgs[*]}")"
 else
 	echo "  build: $build_extra_pkgs"
 fi
@@ -292,14 +289,14 @@ setup_pkgcache() {
 	rootfs_echo "cachedir=/pkgcache" /etc/xbps.d/pkgcache.conf
 }
 run_on_rootfs() {
-	$sudo $chroot "$rootfs_dir" $@ || error "Something went wrong with the bootstrap process!"
+	$sudo $chroot "$rootfs_dir" "$@" || error "Something went wrong with the bootstrap process!"
 }
 run_on_rootfs_shell() {
 	$sudo $chroot "$rootfs_dir" /bin/bash -c "$1" || error "Something went wrong with the bootstrap process!"
 }
 run_setup() {
 	log "Running $1 rootfs setup..."
-	run_on_rootfs /setup.sh $1
+	run_on_rootfs /setup.sh "$1"
 }
 chroot_setup() {
 	for mount in ${SPECIAL_MOUNTS[@]}; do
@@ -369,39 +366,31 @@ prepare_bootstrap() {
 	mkrootfs_conf_setup
 	users_conf_setup
 
-	rm_pkgs="${rm_pkgs[@]}"
 	(( ${#noextract[@]}+${#rm_files[@]} > 0 )) \
 		&& rm_files="${noextract[@]} ${rm_files[@]}" \
 		|| rm_files=""
-	base_pkgs="${base_pkgs[@]}"
-	extra_install_pkgs="${extra_install_pkgs[@]}"
-	enable_sv="${enable_sv[@]}"
-	disable_sv="${disable_sv[@]}"
-	usernames="${usernames[@]}"
-	users_groups_common="${users_groups_common[@]}"
-	users_groups_common="${users_groups_common// /,}"
-	$sudo cp "$base_dir"/setup.sh.in "$rootfs_dir"/setup.sh
-	$sudo sed -i "$rootfs_dir"/setup.sh \
+	sed "$base_dir"/setup.sh.in \
 		-e "s|@COLOR_GREEN@|$(escape_color GREEN)|g" \
 		-e "s|@COLOR_BLUE@|$(escape_color BLUE)|g" \
 		-e "s|@COLOR_RED@|$(escape_color RED)|g" \
 		-e "s|@COLOR_RESET@|$(escape_color RESET)|g" \
 		-e "s|@DEF_MIRROR@|$DEF_MIRROR|g" \
 		-e "s|@MIRROR@|$mirror|g" \
-		-e "s|@RM_PKGS@|$rm_pkgs|g" \
+		-e "s|@RM_PKGS@|${rm_pkgs[*]}|g" \
 		-e "s|@RM_FILES@|$rm_files|g" \
-		-e "s|@BASE_PKGS@|$base_pkgs|g" \
-		-e "s|@EXTRA_PKGS@|$extra_install_pkgs|g" \
-		-e "s|@ENABLE_SV@|$enable_sv|g" \
-		-e "s|@DISABLE_SV@|$disable_sv|g" \
+		-e "s|@BASE_PKGS@|${base_pkgs[*]}|g" \
+		-e "s|@EXTRA_PKGS@|${extra_install_pkgs[*]}|g" \
+		-e "s|@ENABLE_SV@|${enable_sv[*]}|g" \
+		-e "s|@DISABLE_SV@|${disable_sv[*]}|g" \
 		-e "s|@HOSTNAME@|$hostname|g" \
-		-e "s|@USERNAMES@|$usernames|g" \
+		-e "s|@USERNAMES@|${usernames[*]}|g" \
 		-e "s|@USERS_PW_DEFAULT@|$users_pw_default|g" \
 		-e "s|@USERS_PW_ENCRYPTION@|${users_pw_encryption^^}|g" \
-		-e "s|@USERS_GROUPS_COMMON@|$users_groups_common|g" \
+		-e "s|@USERS_GROUPS_COMMON@|$(IFS=','; echo "${users_groups_common[*]}")|g" \
 		-e "s|@USERS_SHELL_DEFAULT@|$users_shell_default|g" \
 		-e "s|@USERS_SUDO_ASKPASS@|$users_sudo_askpass|g" \
-		-e "s|@PERMIT_ROOT_LOGIN@|$permit_root_login|g"
+		-e "s|@PERMIT_ROOT_LOGIN@|$permit_root_login|g" \
+		| $sudo tee "$rootfs_dir"/setup.sh >/dev/null
 	$sudo chmod +x "$rootfs_dir"/setup.sh
 
 	copy_script custom
@@ -413,7 +402,7 @@ extra_pkgs_setup() {
 		$build_extra_pkgs && build_packages
 	fi
 
-	[ "$extra_install_pkgs" ] || return 0 # no extra pkgs to install -> don't setup local repo
+	[ ${#extra_install_pkgs[@]} -gt 0 ] || return 0 # no extra pkgs to install -> don't setup local repo
 
 	local binpkgs="$XBPS_DISTDIR/hostdir/binpkgs"
 	if [ ! -e "$binpkgs" ]; then
@@ -470,7 +459,7 @@ apply_overlays() {
 
 	#log "Applying ${#overlays[@]} enabled overlay(s)..."
 	local overlay="$base_dir/overlay"
-	for folder in ${overlays[@]}; do
+	for folder in "${overlays[@]}"; do
 		if [[ ! -d "$overlay/$folder" || $(ls -1 "$overlay/$folder" | wc -l) -eq 0 ]]; then
 			warn "Overlay folder \"$folder\" either doesn't exist or is empty; ignoring..."
 			continue
@@ -490,7 +479,7 @@ apply_overlays() {
 			$sudo rm "$rootfs_dir"/deploy.sh
 		fi
 		if [ -e "$rootfs_dir"/home/ALL ]; then
-			for user in $usernames; do
+			for user in ${usernames[*]}; do
 				# TODO: also cp to /root?
 				[ "$user" = "root" ] && continue
 				$sudo cp -r "$rootfs_dir"/home/ALL/. "$rootfs_dir"/home/$user/
@@ -503,7 +492,7 @@ fix_user_perms() {
 	[ $user_count -gt 0 ] || return 0
 
 	log "Fixing home folder ownership for $user_count user(s)..."
-	for user in $usernames; do
+	for user in ${usernames[*]}; do
 		[ "$user" = "root" ] && continue
 		run_on_rootfs_shell "chown -R $user: /home/$user"
 	done
@@ -607,7 +596,7 @@ cleanup() {
 #########
 trap cleanup EXIT
 run_script pre
-parse_args $@
+parse_args "$@"
 config_prep
 check_deps
 setup_binfmt
