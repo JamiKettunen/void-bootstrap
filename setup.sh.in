@@ -71,7 +71,7 @@ base_setup() {
 	fi
 
 	log "Upgrading all base packages..."
-	xbps-install -u -y
+	xbps-install -Su -y
 
 	log "Finishing base system setup..."
 	xbps-install base-system -y
