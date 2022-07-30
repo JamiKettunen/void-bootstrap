@@ -129,7 +129,6 @@ config_prep() {
 	[ "$work_dir" ] || work_dir="."
 	work_dir="$(readlink -f "$work_dir")"
 	rootfs_dir="$work_dir/rootfs"
-	[ -d "$rootfs_dir" ] || mkdir -p "$rootfs_dir"
 	[ "$mirror" ] || mirror="$DEF_MIRROR"
 	[ "$img_compress" ] || img_compress="none"
 	user_count=$(printf '%s\n' "${users[@]}" | grep -cv '^root$')
