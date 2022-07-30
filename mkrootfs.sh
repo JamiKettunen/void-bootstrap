@@ -256,7 +256,7 @@ umount_rootfs_special() {
 	done
 }
 umount_rootfs() {
-	[ -d "$rootfs_dir" ] || return
+	[ -d "$rootfs_dir" ] || return 0
 
 	local rootfs_mounts="$(get_rootfs_mounts)"
 	if [ "$rootfs_mounts" ]; then
