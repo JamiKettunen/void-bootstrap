@@ -86,6 +86,11 @@ pkgs_setup() {
 
 	log "Installing additional configured packages..."
 	xbps-install -Sy $BASE_PKGS $EXTRA_PKGS || exit 1
+
+	if [ "$EXTRA_PKGS" ]; then
+		log "Repository-locking all built extra packages..."
+		xbps-pkgdb -m repolock $EXTRA_PKGS || exit 1
+	fi
 }
 sv_setup() {
 	if [ "$ENABLE_SV" ]; then
