@@ -74,8 +74,8 @@ escape_color() { local c="COLOR_$1"; printf '%q' "${!c}" | sed "s/^''$//"; }
 disable_color() { unset COLOR_GREEN COLOR_BLUE COLOR_RED COLOR_RESET; }
 rootfs_echo() { echo -e "$1" | $sudo tee "$rootfs_dir/$2" >/dev/null; }
 get_rootfs_mounts() { grep "$rootfs_dir" /proc/mounts | awk '{print $2}' || :; }
-run_script() { [ -e "$base_dir/mkrootfs.$1.sh" ] && . "$base_dir/mkrootfs.$1.sh" || :; }
-copy_script() { [ -e "$base_dir/mkrootfs.$1.sh" ] && $sudo cp "$base_dir/mkrootfs.$1.sh" "$rootfs_dir"/ || :; }
+run_script() { [ -f "$base_dir/mkrootfs.$1.sh" ] && . "$base_dir/mkrootfs.$1.sh" || :; }
+copy_script() { [ -f "$base_dir/mkrootfs.$1.sh" ] && $sudo cp "$base_dir/mkrootfs.$1.sh" "$rootfs_dir"/ || :; }
 parse_args() {
 	while [ $# -gt 0 ]; do
 		case $1 in
@@ -231,7 +231,7 @@ fetch_rootfs() {
 	log "Latest tarball: $rootfs_tarball"
 	[ "$rootfs_tarball" ] || error "Please check your arch ($arch) and mirror ($mirror)!"
 	local tarball_url="$mirror/live/$release/$rootfs_tarball"
-	[ -e "$tarball_dir/$rootfs_tarball" ] && return
+	[ -f "$tarball_dir/$rootfs_tarball" ] && return
 
 	log "Downloading rootfs tarball..."
 	mkdir -p "$tarball_dir"
@@ -256,7 +256,7 @@ umount_rootfs_special() {
 	done
 }
 umount_rootfs() {
-	[ -e "$rootfs_dir" ] || return
+	[ -d "$rootfs_dir" ] || return
 
 	local rootfs_mounts="$(get_rootfs_mounts)"
 	if [ "$rootfs_mounts" ]; then
@@ -282,7 +282,7 @@ setup_pkgcache() {
 
 	log "Preparing package cache for use..."
 	pkgcache_dir="$(readlink -f "$pkgcache_dir")"
-	[ -e "$pkgcache_dir" ] || mkdir -p "$pkgcache_dir"
+	[ -d "$pkgcache_dir" ] || mkdir -p "$pkgcache_dir"
 	$sudo mkdir "$rootfs_dir"/pkgcache
 	$sudo mount --bind "$pkgcache_dir" "$rootfs_dir"/pkgcache
 	rootfs_echo "cachedir=/pkgcache" /etc/xbps.d/pkgcache.conf
@@ -404,7 +404,7 @@ extra_pkgs_setup() {
 	[ ${#extra_install_pkgs[@]} -gt 0 ] || return 0 # no extra pkgs to install -> don't setup local repo
 
 	local binpkgs="$XBPS_DISTDIR/hostdir/binpkgs"
-	if [ ! -e "$binpkgs" ]; then
+	if [ ! -d "$binpkgs" ]; then
 		warn "'$binpkgs' doesn't exist; please configure your extra_build_pkgs array!"
 		return
 	fi
@@ -416,7 +416,7 @@ extra_pkgs_setup() {
 		reposuffix="/$void_packages_branch"
 		repodir+="$reposuffix"
 	fi
-	if [ ! -e "$repodir/$arch_prefix-repodata" ]; then
+	if [ ! -f "$repodir/$arch_prefix-repodata" ]; then
 		warn "Repo data for $arch_prefix under $repodir not found; skipping local repo..."
 		return
 	fi
@@ -431,7 +431,7 @@ extra_pkgs_only_setup() {
 	local build=false check=false
 	[[ " ${extra_pkg_steps_only[*]} " = *" build "* ]] && build=true
 	[[ " ${extra_pkg_steps_only[*]} " = *" check "* ]] && check=true
-	if [[ " ${extra_pkg_steps_only[*]} " = *" teardown "* && -e "$XBPS_DISTDIR" ]]; then
+	if [[ " ${extra_pkg_steps_only[*]} " = *" teardown "* && -d "$XBPS_DISTDIR" ]]; then
 		custom_packages_setup=true
 		teardown_custom_packages
 		exit 0
@@ -467,17 +467,17 @@ apply_overlays() {
 		log "Applying enabled overlay $folder..."
 		$sudo cp -r "$overlay/$folder"/* "$rootfs_dir"
 
-		if [ -e "$rootfs_dir"/deploy_host.sh ]; then
+		if [ -f "$rootfs_dir"/deploy_host.sh ]; then
 			(. "$rootfs_dir"/deploy_host.sh) || error "Failed to run deploy_host.sh!"
 			$sudo rm "$rootfs_dir"/deploy_host.sh
 		fi
-		if [ -e "$rootfs_dir"/deploy.sh ]; then
+		if [ -f "$rootfs_dir"/deploy.sh ]; then
 			$sudo sed '1 a . /setup.sh' -i "$rootfs_dir"/deploy.sh
 			$sudo chmod +x "$rootfs_dir"/deploy.sh
 			run_on_rootfs /deploy.sh
 			$sudo rm "$rootfs_dir"/deploy.sh
 		fi
-		if [ -e "$rootfs_dir"/home/ALL ]; then
+		if [ -d "$rootfs_dir"/home/ALL ]; then
 			for user in ${usernames[*]}; do
 				# TODO: also cp to /root?
 				[ "$user" = "root" ] && continue
@@ -497,7 +497,7 @@ fix_user_perms() {
 	done
 }
 teardown_pkgcache() {
-	[ -e "$rootfs_dir"/pkgcache ] || return 0
+	[ -d "$rootfs_dir"/pkgcache ] || return 0
 
 	$sudo rm "$rootfs_dir"/etc/xbps.d/pkgcache.conf
 	$sudo umount "$rootfs_dir"/pkgcache
@@ -512,14 +512,14 @@ teardown_pkgcache() {
 	# FIXME: This appears to not work outside chroot(?) with static xbps
 	setup_xbps_static
 	log "Cleaning old version copies of cached packages..."
-	[ -e "$pkgcache_dir"/prune.py ] \
+	[ -f "$pkgcache_dir"/prune.py ] \
 		|| wget https://raw.githubusercontent.com/JamiKettunen/xbps-cache-prune/master/xbps-cache-prune.py \
 			-t 3 --show-progress -qO "$pkgcache_dir"/prune.py
 	# -d false
 	python3 "$pkgcache_dir"/prune.py -c "$pkgcache_dir" -n 3 || :
 }
 teardown_extra_pkgs() {
-	[ -e "$rootfs_dir"/packages ] || return 0
+	[ -d "$rootfs_dir"/packages ] || return 0
 
 	$sudo rm "$rootfs_dir"/etc/xbps.d/localrepo.conf
 	$sudo umount "$rootfs_dir"/packages
@@ -544,7 +544,7 @@ create_image() {
 	[ "$img_size" != "0" ] || return 0
 
 	log "Creating $img_size ext4 rootfs image..."
-	[ -e images ] || mkdir -p images
+	[ -d images ] || mkdir -p images
 	rootfs_img="images/${img_name_format/\%a/$arch$musl_suffix}" # e.g. "aarch64-musl-rootfs-2021-05-24.img"
 	# TODO: F2FS / XFS filesystem support
 	mount | grep -q "$base_dir/tmpmnt" && $sudo umount tmpmnt
