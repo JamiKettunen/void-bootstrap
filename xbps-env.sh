@@ -33,7 +33,11 @@ setup_xbps_static() {
 
 	if $fetch; then
 		log "Fetching latest static xbps binaries for $host_arch..."
-		wget "$mirror/static/$xbps_tarball" -t 3 --show-progress -qO "$tarball_dir/$xbps_tarball"
+		mkdir -p "$tarball_dir"
+		if ! wget "$mirror/static/$xbps_tarball" -t 3 --show-progress -qO "$tarball_dir/$xbps_tarball"; then
+			rm "$tarball_dir/$xbps_tarball"
+			error "Download of $mirror/static/$xbps_tarball failed!"
+		fi
 		checksum="$(sha256sum "$tarball_dir/$xbps_tarball" | awk '{print $1}')"
 		if ! echo "$checksums" | grep -q "$checksum.*$xbps_tarball\$"; then
 			rm "$tarball_dir/$xbps_tarball"
