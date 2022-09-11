@@ -2,7 +2,8 @@
 /tarballs
 
 # rootfs images
-/images/*.img*
+/images
+!/images/.empty
 
 # local nbd config
 /nbd/config
