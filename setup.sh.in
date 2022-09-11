@@ -54,7 +54,7 @@ base_setup() {
 
 	if [ "$RM_PKGS" ]; then
 		log "Removing some unneeded packages..."
-		xbps-remove -y $RM_PKGS || exit 1
+		xbps-remove -y $RM_PKGS || error "Failed to remove packages '$RM_PKGS'!"
 	fi
 	if [ "$RM_FILES" ]; then
 		log "Removing some unneeded files..."
@@ -85,22 +85,22 @@ pkgs_setup() {
 	[ "$BASE_PKGS$EXTRA_PKGS" ] || return
 
 	log "Installing additional configured packages..."
-	xbps-install -Sy $BASE_PKGS $EXTRA_PKGS || exit 1
+	xbps-install -Sy $BASE_PKGS $EXTRA_PKGS || error "Failed to install packages '$BASE_PKGS $EXTRA_PKGS'!"
 
 	if [ "$EXTRA_PKGS" ]; then
 		log "Repository-locking all built extra packages..."
-		xbps-pkgdb -m repolock $EXTRA_PKGS || exit 1
+		xbps-pkgdb -m repolock $EXTRA_PKGS || error "Failed to repolock packages '$EXTRA_PKGS'!"
 	fi
 }
 sv_setup() {
 	if [ "$ENABLE_SV" ]; then
 		log "Enabling runit services $ENABLE_SV..."
-		enable_sv $ENABLE_SV || exit 1
+		enable_sv $ENABLE_SV
 	fi
 
 	if [ "$DISABLE_SV" ]; then
 		log "Disabling runit services $DISABLE_SV..."
-		disable_sv $DISABLE_SV || exit 1
+		disable_sv $DISABLE_SV
 	fi
 }
 user_setup() {
@@ -120,10 +120,10 @@ user_setup() {
 		if [ "$user" = "root" ]; then
 			[ -z "$pw" ] && passwd -d root
 			if [[ "$shell" && "$shell" != "/bin/sh" ]]; then
-				chsh -s $shell || exit 1
+				chsh -s $shell || error "Failed to change shell of root user to '$shell'!"
 			fi
 			if [ "$fullname" ]; then
-				chfn -f "$fullname" root || exit 1
+				chfn -f "$fullname" root || error "Failed to change full name of root user to '$fullname'!"
 			fi
 			continue
 		fi
