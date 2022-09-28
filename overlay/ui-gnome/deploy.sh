@@ -6,7 +6,7 @@ xbps-install -y xorg-server-xwayland xf86-video-fbdev                # Base GUI
 
 # A small GNOME desktop with some default applications installed
 xbps-install -y gnome-core \
-	gnome-tweaks gnome-console gnome-system-monitor gnome-screenshot \
+	gnome-tweaks gnome-console gnome-usage gnome-screenshot \
 	gnome-disk-utility gnome-clocks gnome-calendar \
 	gedit
 
