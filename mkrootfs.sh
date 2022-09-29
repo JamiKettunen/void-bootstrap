@@ -423,7 +423,7 @@ extra_pkgs_setup() {
 
 	$sudo mkdir "$rootfs_dir"/packages
 	$sudo mount --bind "$binpkgs" "$rootfs_dir"/packages
-	rootfs_echo "repository=/packages$reposuffix" /etc/xbps.d/localrepo.conf
+	rootfs_echo "repository=/packages$reposuffix" /etc/xbps.d/00-repository-local.conf
 }
 extra_pkgs_only_setup() {
 	[ ${#extra_pkg_steps_only[@]} -gt 0 ] || return 0
@@ -521,7 +521,7 @@ teardown_pkgcache() {
 teardown_extra_pkgs() {
 	[ -d "$rootfs_dir"/packages ] || return 0
 
-	$sudo rm "$rootfs_dir"/etc/xbps.d/localrepo.conf
+	$sudo rm "$rootfs_dir"/etc/xbps.d/00-repository-local.conf
 	$sudo umount "$rootfs_dir"/packages
 	$sudo rmdir "$rootfs_dir"/packages
 }
