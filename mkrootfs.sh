@@ -509,14 +509,12 @@ teardown_pkgcache() {
 		return 0
 	fi
 
-	# FIXME: This appears to not work outside chroot(?) with static xbps
 	setup_xbps_static
 	log "Cleaning old version copies of cached packages..."
 	[ -f "$pkgcache_dir"/prune.py ] \
 		|| wget https://raw.githubusercontent.com/JamiKettunen/xbps-cache-prune/master/xbps-cache-prune.py \
 			-t 3 --show-progress -qO "$pkgcache_dir"/prune.py
-	# -d false
-	python3 "$pkgcache_dir"/prune.py -c "$pkgcache_dir" -n 3 || :
+	python3 "$pkgcache_dir"/prune.py -c "$pkgcache_dir" -n 2 -d false || :
 }
 teardown_extra_pkgs() {
 	[ -d "$rootfs_dir"/packages ] || return 0
