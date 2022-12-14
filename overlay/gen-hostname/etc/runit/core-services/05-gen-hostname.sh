@@ -1,4 +1,4 @@
-DT_COMPATIBLE_NODE=/sys/firmware/devicetree/base/compatible
+DT_COMPATIBLE_NODE=/proc/device-tree/compatible
 [ -r $DT_COMPATIBLE_NODE ] || return
 
 DT_MODEL="$(cat -v $DT_COMPATIBLE_NODE | cut -d'^' -f1 | tr ',' '-')" # e.g. "oneplus-dumpling"
