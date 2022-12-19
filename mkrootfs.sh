@@ -472,7 +472,9 @@ apply_overlays() {
 			$sudo rm "$rootfs_dir"/deploy_host.sh
 		fi
 		if [ -f "$rootfs_dir"/deploy.sh ]; then
-			$sudo sed '1 a . /setup.sh' -i "$rootfs_dir"/deploy.sh
+			if [ "$(sed -n '/^#!.*bash/p;q' "$rootfs_dir"/deploy.sh)" ]; then
+				$sudo sed '1 a . /setup.sh' -i "$rootfs_dir"/deploy.sh
+			fi
 			$sudo chmod +x "$rootfs_dir"/deploy.sh
 			run_on_rootfs /deploy.sh
 			$sudo rm "$rootfs_dir"/deploy.sh
