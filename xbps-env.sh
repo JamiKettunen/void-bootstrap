@@ -192,7 +192,7 @@ check_pkg_updates() {
 	log "Checking updates for ${#pkgs_build[@]} packages..."
 	local updates="" tmp=""
 	for pkg in ${pkgs_build[@]}; do
-		tmp="$(./xbps-src update-check $pkg)"
+		tmp="$(./xbps-src update-check $pkg || error "Running update-check failed for '$pkg'!")"
 		[ "$tmp" ] && updates+="$tmp\n"
 	done
 	if [ "$updates" ]; then
