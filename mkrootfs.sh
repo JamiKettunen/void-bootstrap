@@ -29,7 +29,6 @@ chroot="" # e.g. "chroot" or "systemd-nspawn -q -D"
 build_extra_pkgs=true
 extra_pkg_steps_only=()
 user_count=0
-sudo="sudo" # prefix for commands requiring root user privileges; unset if running as root
 usernames=()
 
 # Functions
@@ -269,6 +268,19 @@ umount_rootfs() {
 		done
 	fi
 	$sudo rm -r "$rootfs_dir"
+}
+sudo_keepalive() { if [ "$sudo" = "sudo" ]; then sudo -v; else $sudo true; fi; }
+start_sudo_timer() {
+	$sudo_timer || return 0
+	[ "$sudo" ] || return 0 # not needed, running as root
+
+	log "Starting $sudo background timer to prevent repeated password prompts..."
+	sudo_keepalive
+	while true; do
+		sudo_keepalive
+		sleep 60
+		kill -0 "$$" || exit
+	done 2>/dev/null &
 }
 unpack_rootfs() {
 	log "Unpacking rootfs tarball..."
@@ -602,6 +614,7 @@ setup_binfmt
 print_config
 extra_pkgs_only_setup
 fetch_rootfs
+start_sudo_timer
 unpack_rootfs
 setup_pkgcache
 prepare_bootstrap

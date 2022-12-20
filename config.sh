@@ -1,5 +1,12 @@
 # Config file for Void Bootstrap's mkrootfs.py
 
+# Prefix for commands requiring root user privileges; e.g. "sudo" or "doas"
+# Unset on runtime when running as root
+sudo="sudo"
+
+# Enable background timer to prevent repeated password prompts? (true|false)
+sudo_timer=false
+
 # Void Linux release tarballs to target
 # e.g. "current" or "20210316"
 # https://alpha.de.repo.voidlinux.org/live
