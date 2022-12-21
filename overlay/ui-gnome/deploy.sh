@@ -8,6 +8,6 @@ xbps-install -y xorg-server-xwayland xf86-video-fbdev                # Base GUI
 xbps-install -y gnome-core \
 	gnome-tweaks gnome-console gnome-usage gnome-screenshot \
 	gnome-disk-utility gnome-clocks gnome-calendar \
-	gedit
+	gnome-text-editor
 
 enable_sv gdm
