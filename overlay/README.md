@@ -1,5 +1,5 @@
 # Overlays
-Contents from directories added here can be copied over to the rootfs when they are enabled via [config.sh](../config.sh) `overlays` array.
+Contents from directories added here can be copied over to the rootfs when they are enabled via [config.sh](../config.sh) `overlays` array. Do note that overlay directory names with spaces are NOT supported!
 
 A `home/ALL` directory can be made if files should be copied to home directories of all users (except `root`).
 
