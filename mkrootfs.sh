@@ -470,7 +470,7 @@ apply_overlays() {
 
 	#log "Applying ${#overlays[@]} enabled overlay(s)..."
 	local overlay="$base_dir/overlay"
-	for folder in "${overlays[@]}"; do
+	for folder in ${overlays[*]}; do
 		if [[ ! -d "$overlay/$folder" || $(ls -1 "$overlay/$folder" | wc -l) -eq 0 ]]; then
 			warn "Overlay folder \"$folder\" either doesn't exist or is empty; ignoring..."
 			continue
