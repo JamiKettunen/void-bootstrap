@@ -314,10 +314,6 @@ chroot_setup() {
 		$sudo mount --rbind /$mount "$rootfs_dir"/$mount
 		$sudo mount --make-rslave "$rootfs_dir"/$mount
 	done
-
-	if [ "$qemu_arch" ]; then
-		$sudo cp $(cmd_path qemu-$qemu_arch-static) "$rootfs_dir"/usr/bin/
-	fi
 }
 # Write content ($1) to a file ($2) on the rootfs.
 write_conf() {
@@ -546,7 +542,6 @@ finalize_setup() {
 
 	if [ "$backend" != "systemd-nspawn" ]; then
 		umount_rootfs_special
-		[ "$qemu_arch" ] && $sudo rm -f "$rootfs_dir"/usr/bin/qemu-$qemu_arch-static
 	fi
 	[ ${#overlays[@]} -gt 0 ] && $sudo find "$rootfs_dir" -type f -name '.empty' -delete
 	local rootfs_size="$($sudo du -sh "$rootfs_dir" | awk '{print $1}')" # e.g. "447M"
