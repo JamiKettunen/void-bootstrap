@@ -1,8 +1,11 @@
 #!/bin/bash
 set -e
-xbps-install -y dbus-elogind-libs dbus-elogind-x11 xdg-user-dirs-gtk # Desktop backend stuff
-xbps-install -y mesa-dri glxinfo mesa-demos                          # GPU
-xbps-install -y xorg-server-xwayland xf86-video-fbdev                # Base GUI
+# Desktop backend stuff
+xbps-install -y dbus-elogind-libs dbus-elogind-x11 xdg-user-dirs-gtk
+# GPU
+xbps-install -y mesa-dri
+# Base GUI
+xbps-install -y xorg-server-xwayland xf86-video-fbdev xf86-input-libinput
 
 # A small GNOME desktop with some default applications installed
 xbps-install -y gnome-core \
