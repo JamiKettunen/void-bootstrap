@@ -1,9 +1,27 @@
+[org/gnome/Console]
+font-scale=0.6
+
 [org/gnome/control-center]
 last-panel='info-overview'
+
+[org/gnome/desktop/background]
+color-shading-type='solid'
+picture-options='zoom'
+picture-uri='file:///usr/share/backgrounds/gnome/adwaita-l.webp'
+picture-uri-dark='file:///usr/share/backgrounds/gnome/adwaita-d.webp'
+primary-color='#3071AE'
+secondary-color='#000000'
 
 [org/gnome/desktop/interface]
 gtk-theme='Adwaita-dark'
 show-battery-percentage=true
+
+[org/gnome/desktop/screensaver]
+color-shading-type='solid'
+picture-options='zoom'
+picture-uri='file:///usr/share/backgrounds/gnome/adwaita-l.webp'
+primary-color='#3071AE'
+secondary-color='#000000'
 
 [org/gnome/desktop/search-providers]
 disable-external=true
