@@ -306,7 +306,7 @@ run_on_rootfs() {
 	$sudo $chroot "$rootfs_dir" "$@" || error "Something went wrong with the bootstrap process!"
 }
 run_on_rootfs_shell() {
-	$sudo $chroot "$rootfs_dir" /bin/bash -c "$1" || error "Something went wrong with the bootstrap process!"
+	run_on_rootfs /bin/bash -c "$1"
 }
 run_setup() {
 	log "Running $1 rootfs setup..."
