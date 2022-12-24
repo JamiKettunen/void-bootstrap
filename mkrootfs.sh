@@ -99,7 +99,10 @@ config_prep() {
 	cd "$base_dir"
 	. config.sh
 	[ -r "$config" ] && . "$config" || config="config.sh"
-	[[ "$config" != "config.local.sh" && -r "config.local.sh" ]] &&  . config.local.sh
+	if [[ "$config" != "config.local.sh" && -r "config.local.sh" ]]; then
+		log "Including config.local.sh overrides..."
+		. config.local.sh
+	fi
 	for override in "${config_overrides[@]}"; do
 		eval "$override" # e.g. "arch=armv7l"
 	done
