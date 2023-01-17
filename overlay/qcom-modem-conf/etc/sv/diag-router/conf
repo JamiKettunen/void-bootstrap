@@ -1,0 +1,1 @@
+grep -q 'qcom,msm8998' /proc/device-tree/compatible || exec chpst -b diag-router pause
