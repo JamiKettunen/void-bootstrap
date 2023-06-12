@@ -35,4 +35,4 @@ attach-modal-dialogs=false
 center-new-windows=true
 
 [org/gnome/settings-daemon/plugins/power]
-power-button-action='interactive'
+power-button-action='suspend'
