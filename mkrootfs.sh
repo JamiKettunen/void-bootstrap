@@ -18,6 +18,9 @@ COLOR_RESET="\e[0m"
 config="config.custom.sh"
 config_overrides=()
 base_dir="$(readlink -f "$(dirname "$0")")"
+profiles=("$base_dir")
+profiles_exclude=()
+top_profile="$base_dir"
 host_arch="$(uname -m)" # e.g. "x86_64"
 qemu_arch="" # e.g. "aarch64" / "arm"
 musl_suffix="" # e.g. "-musl"
@@ -62,7 +65,12 @@ OPTIONS:
                   ${SUPPORTED_ARCHES[*]}
     -c, --config  Choose an alternative config file, defaults to config.custom.sh
     -m, --musl    Choose whether or not to use musl over glibc as the C standard library,
-                  true or false"
+                  true or false
+    -p, --add-profile-dir
+                  Add a profile directory to being considered when looking for overlays
+                  or packages to build
+    -P, --exclude-profile-dir
+                  Reverse of --add-profile-dir"
 }
 error() { die "${COLOR_RED}ERROR: $1${COLOR_RESET}"; }
 log() { echo -e "${COLOR_BLUE}>>${COLOR_RESET} $1"; }
@@ -87,6 +95,8 @@ parse_args() {
 			-N|--no-color) disable_color ;;
 			-u|--check-updates-only) extra_pkg_steps_only+=(check) ;;
 			-t|--teardown-void-packages) extra_pkg_steps_only+=(teardown) ;;
+			-p|--add-profile-dir) profiles+=("$2"); shift ;;
+			-P|--exclude-profile-dir) profiles_exclude+=("$2"); shift ;;
 			*) usage ;;
 		esac
 		shift
@@ -97,12 +107,23 @@ config_prep() {
 	[ $EUID -eq 0 ] && unset sudo
 	unset XBPS_DISTDIR
 	cd "$base_dir"
+	local input_profiles=("${profiles[@]}") profile
+	profiles=()
+	for profile in "${input_profiles[@]}"; do
+		[[ " ${profiles_exclude[*]} " =~ " $profile " ]] && continue
+		[[ " ${profiles[*]} " =~ " $profile " ]] && continue # avoid duplicated
+		profiles+=("$profile")
+		top_profile="$profile"
+	done
+	[ ${#profiles[@]} -eq 0 ] && error "At least one profile has to be available!"
 	. config.sh
+	cd "$top_profile"
 	[ -r "$config" ] && . "$config" || config="config.sh"
 	if [[ "$config" != "config.local.sh" && -r "config.local.sh" ]]; then
 		log "Including config.local.sh overrides..."
 		. config.local.sh
 	fi
+	cd "$base_dir"
 	for override in "${config_overrides[@]}"; do
 		eval "$override" # e.g. "arch=armv7l"
 	done
@@ -203,6 +224,7 @@ if [ "$pkgcache_dir" ]; then
 else
 	echo "  pkgcache: none"
 fi
+echo "  profiles: $(fold_offset 12 "${profiles[*]}")"
 if [ ${#overlays[@]} -gt 0 ]; then
 	echo "  overlays: $(fold_offset 12 "${overlays[*]}")"
 else
@@ -468,15 +490,24 @@ apply_overlays() {
 	[ ${#overlays[@]} -gt 0 ] || return 0
 
 	#log "Applying ${#overlays[@]} enabled overlay(s)..."
-	local overlay="$base_dir/overlay"
+	local profile_overlays=($(echo "${profiles[@]/%/\/overlay}")) overlay_candidates overlay
 	for folder in ${overlays[*]}; do
-		if [[ ! -d "$overlay/$folder" || $(ls -1 "$overlay/$folder" | wc -l) -eq 0 ]]; then
-			warn "Overlay folder \"$folder\" either doesn't exist or is empty; ignoring..."
-			continue
-		fi
+		overlay_candidates=($(find "${profile_overlays[@]}" -maxdepth 1 -name "$folder" -exec sh -c '[ $(ls -1 $1 2>/dev/null | wc -l) -gt 0 ] && echo $1' shell {} \;))
+		case ${#overlay_candidates[@]} in
+			0)
+				warn "Overlay folder \"$folder\" doesn't exist in any profile or is empty; ignoring..."
+				continue
+				;;
+			1) overlay="${overlay_candidates[0]}" ;;
+			*)
+				overlay="${overlay_candidates[-1]}"
+				warn "Overlay folder \"$folder\" has more than one candidate; picking $overlay..."
+				;;
+		esac
 
+		# TODO: print from which profile!
 		log "Applying enabled overlay $folder..."
-		$sudo cp -r "$overlay/$folder"/* "$rootfs_dir"
+		$sudo cp -r "$overlay"/* "$rootfs_dir"
 
 		if [ -f "$rootfs_dir"/deploy_host.sh ]; then
 			(. "$rootfs_dir"/deploy_host.sh) || error "Failed to run deploy_host.sh!"
@@ -553,20 +584,21 @@ finalize_setup() {
 create_image() {
 	[ "$img_size" != "0" ] || return 0
 
+	local images="$top_profile/images" tmpmnt="$top_profile/tmpmnt"
 	log "Creating $img_size ext4 rootfs image..."
-	[ -d images ] || mkdir -p images
-	rootfs_img="images/${img_name_format/\%a/$arch$musl_suffix}" # e.g. "aarch64-musl-rootfs-2021-05-24.img"
+	[ -d "$images" ] || mkdir -p "$images"
+	rootfs_img="$images/${img_name_format/\%a/$arch$musl_suffix}" # e.g. "aarch64-musl-rootfs-2021-05-24.img"
 	# TODO: F2FS / XFS filesystem support
-	mount | grep -q "$base_dir/tmpmnt" && $sudo umount tmpmnt
+	mount | grep -q "$tmpmnt" && $sudo umount "$tmpmnt"
 	fallocate -l $img_size "$rootfs_img"
 	mkfs.ext4 -m 1 -F "$rootfs_img" #&> /dev/null
-	mkdir -p tmpmnt
-	$sudo mount "$rootfs_img" tmpmnt
+	mkdir -p "$tmpmnt"
+	$sudo mount "$rootfs_img" "$tmpmnt"
 
 	log "Moving Void Linux installation to $rootfs_img..."
-	$sudo mv "$rootfs_dir"/* tmpmnt/
-	$sudo umount tmpmnt
-	$sudo rmdir tmpmnt
+	$sudo mv "$rootfs_dir"/* "$tmpmnt"/
+	$sudo umount "$tmpmnt"
+	$sudo rmdir "$tmpmnt"
 	umount_rootfs
 
 	log "Resizing $rootfs_img to be as small as possible..."

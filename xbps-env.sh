@@ -124,13 +124,6 @@ update_void_packages() {
 	#git -C "$XBPS_DISTDIR" clean -dfx
 }
 merge_custom_packages() {
-	local packages="$base_dir"/packages
-	if ! [[ -e "$packages"/custom-shlibs ||
-	        $(find -L "$packages"/* -type f -name 'template' | wc -l) -gt 0 ||
-	        $(find "$packages"/patches/* -type f | wc -l) -gt 0 ]]; then
-		return # no custom packages/shlibs/patches to setup
-	fi
-
 	if [ "$(git -C "$XBPS_DISTDIR" status -s)" ]; then
 		error "Local void-packages clone not clean; refusing to merge custom packages!"
 	fi
@@ -149,9 +142,13 @@ merge_custom_packages() {
 
 	log "Merging custom packages and patches into void-packages..."
 	custom_packages_setup=true
-	if ! "$packages"/merge.sh "$XBPS_DISTDIR"; then
-		error "Merge of custom packages failed!"
-	fi
+	local profile_packages=($(echo "${profiles[@]/%/\/packages}"))
+	for packages in "${profile_packages[@]}"; do
+		# TODO: print from which profile!
+		if ! "$base_dir"/packages/merge.sh "$packages" "$XBPS_DISTDIR"; then
+			error "Merge of custom packages failed!"
+		fi
+	done
 }
 gen_clean_excludes() { for i in $@; do echo "-e $i "; done; }
 teardown_custom_packages() {

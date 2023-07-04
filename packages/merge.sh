@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
-merge_root="$(readlink -f "$(dirname "$0")")"
-void_packages="$1"
+merge_root="$1" # packages dir of some profile
+void_packages="$2"
 void_shlibs="$void_packages/common/shlibs"
 void_virtuals="$void_packages/etc/defaults.virtual"
 void_srcpkgs="$void_packages/srcpkgs"
@@ -12,7 +12,7 @@ if [[ ! -f "$void_shlibs" || ! -d "$void_srcpkgs" ]]; then
 fi
 
 merge_pkgs() {
-	custom_pkgs_count=$(find -L "$merge_root"/* -type f -name 'template' | wc -l)
+	custom_pkgs_count=$(find -L "$merge_root"/* -type f -name 'template' 2>/dev/null | wc -l)
 	[ $custom_pkgs_count -gt 0 ] || return 0
 
 	echo "Merging $custom_pkgs_count custom packages..."

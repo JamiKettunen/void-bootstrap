@@ -51,6 +51,44 @@ The following scripts can be created to be sourced by `mkrootfs.sh` if they exis
 ## Custom tweaks to void-packages
 See [packages/README.md](packages/README.md) for more details.
 
+## External repos
+Standalone external repositories can use `void-bootstrap` as a base to avoid forking or extra maintenance burden of the core script with a setup similar to the following:
+```bash
+cat <<'EOF' > mkrootfs.sh
+#!/usr/bin/env bash
+set -e
+cd "$(readlink -f "$(dirname "$0")")"
+if [ -d void-bootstrap ]; then
+	[ "$(find void-bootstrap/.git -maxdepth 0 -mmin +240)" ] && git -C void-bootstrap pull --ff-only
+else
+	git clone https://github.com/JamiKettunen/void-bootstrap
+fi
+void-bootstrap/"${0##*/}" -p "$PWD" "$@"
+EOF
+ln -s mkrootfs.sh deploy.sh
+ln -s mkrootfs.sh tethering.sh
+```
+Afterwards feel free to [setup a `packages` structure](https://github.com/JamiKettunen/void-bootstrap/tree/master/packages#readme) or [add extra `overlays`](https://github.com/JamiKettunen/void-bootstrap/tree/master/overlay#readme) to this new repo.
+
+By the end your external repo layout could look like:
+```
+external-void-bootstrap
+├── overlay
+│   └── example
+│       └── deploy.sh
+├── packages
+│   ├── mypkg
+│   │   └── template
+│   ├── mypkg-devel -> mypkg
+│   ├── patches
+│   │   └── example.patch
+│   └── custom-shlibs
+├── config.custom.sh
+├── deploy.sh -> mkrootfs.sh
+├── mkrootfs.sh
+└── tethering.sh -> mkrootfs.sh
+```
+
 ## DST Root CA X3 certificate verification failed
 This can happen while starting to build extra packages in case your host system has broken certificates (e.g. Arch).
 
