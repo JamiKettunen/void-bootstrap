@@ -22,3 +22,6 @@ packages
 After that call `merge.sh` to merge `custom-shlibs` with void-packages' `common/custom-shlibs` and copy all package directories to `srcpkgs`.
 
 Based on the idea of [`nvoid`](https://github.com/not-void/nvoid) alternative `xbps-src` repo.
+
+## Patches
+* Add support for [checking updates to git packages](patches/0001-update-check-add-support-for-git-packages.patch)
