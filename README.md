@@ -98,3 +98,6 @@ curl -LO https://letsencrypt.org/certs/isrgrootx1.pem
 sudo trust anchor --store isrgrootx1.pem
 sudo rm isrgrootx1.pem /etc/ssl/certs/2e5ac55d.0
 ```
+
+## License
+All code in this repository is licensed under a [`BSD-2-Clause`](LICENSE) license.
