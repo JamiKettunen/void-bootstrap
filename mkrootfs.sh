@@ -536,7 +536,7 @@ finalize_setup() {
 		umount_rootfs_special
 		[ "$qemu_arch" ] && $sudo rm -f "$rootfs_dir"/usr/bin/qemu-$qemu_arch-static
 	fi
-	[ ${#overlays[@]} -gt 0 ] && $sudo find "$rootfs_dir" -type f -name '.keep' -delete
+	[ ${#overlays[@]} -gt 0 ] && $sudo find "$rootfs_dir" -type f -name '.empty' -delete
 	local rootfs_size="$($sudo du -sh "$rootfs_dir" | awk '{print $1}')" # e.g. "447M"
 	log "Rootfs creation done; final size: $rootfs_size"
 }

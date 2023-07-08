@@ -22,8 +22,8 @@
 # all image files
 /*.img
 
-# all hidden files except .gitignore & .keep
+# all hidden files except .gitignore & .empty
 .*
 !.gitignore
-!.keep
+!.empty
 
