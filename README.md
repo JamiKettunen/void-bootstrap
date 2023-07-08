@@ -42,6 +42,9 @@ The following scripts can be created to be sourced by `mkrootfs.sh` if they exis
 * `mkrootfs.custom.sh`: Executed inside the rootfs before cleanup operations; can be used to script more complex environments if `config.sh` doesn't cut it
 * `mkrootfs.post.sh`: Executed after rootfs image creation (and compression); can be used for local CI build artifact uploads or such actions
 
+## Custom tweaks to void-packages
+See [packages/README.md](packages/README.md) for more details.
+
 ## DST Root CA X3 certificate verification failed
 This can happen while starting to build extra packages in case your host system has broken certificates (e.g. Arch).
 
