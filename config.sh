@@ -109,7 +109,10 @@ ignorepkg=()
 # Files to avoid extracting from all packages
 # These are automatically added to rm_files
 # NOTE: All patterns with globs (*) have to be quoted!
-noextract=()
+noextract=(
+	# systemd is not an init system choice on Void so these are rather pointless
+	"/usr/lib/systemd/*"
+)
 
 # File patterns to remove from the rootfs
 # Automatically contains everything from noextract
