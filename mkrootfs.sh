@@ -6,7 +6,7 @@ set -e
 ############
 SUPPORTED_ARCHES=(aarch64 armv6l armv7l x86_64 i686)
 SPECIAL_MOUNTS=(sys dev proc)
-DEF_MIRROR="https://repo-default.voidlinux.org"
+DEF_MIRROR="https://alpha.de.repo.voidlinux.org"
 COLOR_GREEN="\e[32m"
 COLOR_BLUE="\e[36m"
 COLOR_RED="\e[91m"
