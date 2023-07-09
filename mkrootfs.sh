@@ -192,7 +192,7 @@ check_deps() {
 	done
 	[ ${#missing_deps[@]} -eq 0 ] && return
 
-	error "${#missing_deps[@]} missing runtime dependencies found:
+	error "${#missing_deps[@]} missing host binaries found:
 
    ${missing_deps[*]}
 "
