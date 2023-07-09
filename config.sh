@@ -1,8 +1,9 @@
 # Config file for Void Bootstrap's mkrootfs.py
 
 # Prefix for commands requiring root user privileges; e.g. "sudo" or "doas"
-# Unset on runtime when running as root
-sudo="sudo"
+# "" = auto-detect and use "sudo" or "doas" as needed
+# NOTE: Unset on runtime when running as root
+sudo=""
 
 # Enable background timer to prevent repeated password prompts? (true|false)
 sudo_timer=false

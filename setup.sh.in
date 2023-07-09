@@ -41,6 +41,7 @@ mirror_setup() {
 	[ "$MIRROR" = "$DEF_MIRROR" ] && return
 	log "Switching default package mirror to '$MIRROR'..."
 	cp /usr/share/xbps.d/*-repository-*.conf /etc/xbps.d/
+	# FIXME: Chimera Linux fails right here under QEMU arches due to a segfault of e.g. qemu-aarch64!
 	sed -i "s|$DEF_MIRROR|$MIRROR|g" /etc/xbps.d/*-repository-*.conf
 }
 base_setup() {

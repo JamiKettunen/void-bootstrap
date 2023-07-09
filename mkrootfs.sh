@@ -26,6 +26,8 @@ qemu_arch="" # e.g. "aarch64" / "arm"
 musl_suffix="" # e.g. "-musl"
 rootfs_match="" # e.g. "aarch64-musl-ROOTFS"
 rootfs_dir="" # e.g. "/tmp/void-bootstrap/rootfs"
+wget="" # e.g. "wget2" or "wget"
+wget_progress_args=() # e.g. "--progress=bar --force-progress" or "--show-progress"
 rootfs_tarball="" # e.g. "void-aarch64-musl-ROOTFS-20210218.tar.xz"
 tarball_dir="$base_dir/tarballs"
 chroot="" # e.g. "chroot" or "systemd-nspawn -q -D"
@@ -104,7 +106,6 @@ parse_args() {
 }
 config_prep() {
 	[ -t 1 ] || disable_color # avoid writing color escape codes to piped stdout
-	[ $EUID -eq 0 ] && unset sudo
 	unset XBPS_DISTDIR
 	cd "$base_dir"
 	local input_profiles=("${profiles[@]}") profile
@@ -124,6 +125,15 @@ config_prep() {
 		. config.local.sh
 	fi
 	cd "$base_dir"
+	if [ $EUID -eq 0 ]; then
+		unset sudo
+	elif [ -z "$sudo" ]; then
+		if cmd_exists sudo; then
+			sudo="sudo"
+		elif cmd_exists doas; then
+			sudo="doas"
+		fi
+	fi
 	for override in "${config_overrides[@]}"; do
 		eval "$override" # e.g. "arch=armv7l"
 	done
@@ -149,8 +159,7 @@ config_prep() {
 	if [ -z "$backend" ]; then
 		cmd_exists systemd-nspawn && backend="systemd-nspawn" || backend="chroot"
 	fi
-	[ "$work_dir" ] || work_dir="."
-	work_dir="$(readlink -f "$work_dir")"
+	[ "$work_dir" ] || work_dir="$base_dir"
 	rootfs_dir="$work_dir/rootfs"
 	[ "$mirror" ] || mirror="$DEF_MIRROR"
 	[ "$img_compress" ] || img_compress="none"
@@ -160,11 +169,21 @@ config_prep() {
 	. xbps-env.sh
 }
 check_deps() {
-	local runtime_deps=($backend wget xz mkfs.ext4 $sudo) missing_deps=()
+	local runtime_deps=($backend xz mkfs.ext4 $sudo) missing_deps=()
+	[[ $EUID -ne 0 && -z "$sudo" ]] && missing_deps+=("(sudo|doas)")
+	if cmd_exists wget2; then
+		wget="wget2"
+		wget_progress_args=(--progress=bar --force-progress)
+	elif cmd_exists wget; then
+		wget="wget"
+		wget_progress_args=(--show-progress)
+	else
+		missing_deps+=("(wget2|wget)")
+	fi
 	[ "$img_compress" = "gz" ] && runtime_deps+=(gzip)
 	if [ "$qemu_arch" ]; then
-		runtime_deps+=(qemu-$qemu_arch-static)
-		[ "$backend" != "systemd-nspawn" ] && runtime_deps+=(update-binfmts)
+		cmd_exists qemu-$qemu_arch-static || cmd_exists qemu-$qemu_arch || \
+			missing_deps+=("(qemu-$qemu_arch-static|qemu-$qemu_arch)")
 	fi
 	[ ${#extra_build_pkgs[@]} -gt 0 ] && runtime_deps+=(git patch)
 
@@ -191,9 +210,9 @@ setup_binfmt() {
 	fi
 
 	# TODO: detailed error reports on what might be wrong with binfmt_misc
-	binfmt_procfs=$(find $binfmt_procfs/* -exec grep -sl "interpreter.*qemu-$qemu_arch-static" {} + | head -n1)
+	binfmt_procfs=$(find $binfmt_procfs/* -exec grep -sl "interpreter.*qemu-$qemu_arch" {} + | head -n1)
 	if [ -z "$binfmt_procfs" ] || ! grep -q '^enabled$' $binfmt_procfs; then
-		error "Please re-check your '$binfmt_backend' setup (enabled qemu-$qemu_arch-static interpreter wasn't detected)!"
+		error "Please re-check your '$binfmt_backend' setup (enabled qemu-$qemu_arch{,-static} interpreter wasn't detected)!"
 	fi
 }
 # Fold while offsetting ouput lines after the first one by $1 spaces.
@@ -209,12 +228,17 @@ fold_offset() {
 	done
 }
 print_config() {
-	echo "General configuration:
+	echo "Host environment:
 
-  host:     $host_arch
+  arch:    $host_arch
+  sudo:    ${sudo:-none}
+  wget:    $wget
+  backend: $backend
+
+Rootfs configuration:
+
   arch:     $arch
   release:  $release
-  backend:  $backend
   musl:     $musl
   mirror:   $mirror
   users:    $user_count
@@ -251,7 +275,7 @@ echo
 "
 }
 fetch_rootfs() {
-	rootfs_tarball="$(wget "$mirror/live/$release/" -t 3 -qO - | grep $rootfs_match | cut -d'"' -f2)"
+	rootfs_tarball="$($wget "$mirror/live/$release/" -t 3 -qO - | grep $rootfs_match | cut -d'"' -f2)"
 	log "Latest tarball: $rootfs_tarball"
 	[ "$rootfs_tarball" ] || error "Please check your arch ($arch) and mirror ($mirror)!"
 	local tarball_url="$mirror/live/$release/$rootfs_tarball"
@@ -259,12 +283,12 @@ fetch_rootfs() {
 
 	log "Downloading rootfs tarball..."
 	mkdir -p "$tarball_dir"
-	wget "$tarball_url" -t 3 --show-progress -qO "$tarball_dir/$rootfs_tarball"
+	$wget "$tarball_url" -t 3 "${wget_progress_args[@]}" -qO "$tarball_dir/$rootfs_tarball"
 
 	log "Verifying tarball SHA256 checksum..."
 	local filenames=() checksums=""
 	for file in sha256sums sha256sum sha256; do
-		checksums="$(wget "$mirror/live/$release/$file.txt" -t 3 -qO - || :)"
+		checksums="$($wget "$mirror/live/$release/$file.txt" -t 3 -qO - || :)"
 		[ "$checksums" ] && break
 	done
 	local checksum="$(sha256sum "$tarball_dir/$rootfs_tarball" | awk '{print $1}')"
@@ -294,15 +318,15 @@ umount_rootfs() {
 	fi
 	$sudo rm -r "$rootfs_dir"
 }
-sudo_keepalive() { if [ "$sudo" = "sudo" ]; then sudo -v; else $sudo true; fi; }
 start_sudo_timer() {
+	# FIXME: figure out a working implementation for "doas"
 	$sudo_timer || return 0
-	[ "$sudo" ] || return 0 # not needed, running as root
+	[ "$sudo" = "sudo" ] || return 0 # not needed, running as root or using e.g. "doas"
 
 	log "Starting $sudo background timer to prevent repeated password prompts..."
-	sudo_keepalive
+	sudo -v
 	while true; do
-		sudo_keepalive
+		sudo -v
 		sleep 60
 		kill -0 "$$" || exit
 	done 2>/dev/null &
@@ -400,7 +424,7 @@ prepare_bootstrap() {
 	(( ${#noextract[@]}+${#rm_files[@]} > 0 )) \
 		&& rm_files="${noextract[@]} ${rm_files[@]}" \
 		|| rm_files=""
-	sed "$base_dir"/setup.sh.in \
+	sed \
 		-e "s|@COLOR_GREEN@|$(escape_color GREEN)|g" \
 		-e "s|@COLOR_BLUE@|$(escape_color BLUE)|g" \
 		-e "s|@COLOR_RED@|$(escape_color RED)|g" \
@@ -421,6 +445,7 @@ prepare_bootstrap() {
 		-e "s|@USERS_SHELL_DEFAULT@|$users_shell_default|g" \
 		-e "s|@USERS_SUDO_ASKPASS@|$users_sudo_askpass|g" \
 		-e "s|@PERMIT_ROOT_LOGIN@|$permit_root_login|g" \
+		"$base_dir"/setup.sh.in \
 		| $sudo tee "$rootfs_dir"/setup.sh >/dev/null
 	$sudo chmod +x "$rootfs_dir"/setup.sh
 
@@ -555,8 +580,8 @@ teardown_pkgcache() {
 	setup_xbps_static
 	log "Cleaning old version copies of cached packages..."
 	[ -f "$pkgcache_dir"/prune.py ] \
-		|| wget https://raw.githubusercontent.com/JamiKettunen/xbps-cache-prune/master/xbps-cache-prune.py \
-			-t 3 --show-progress -qO "$pkgcache_dir"/prune.py
+		|| $wget https://raw.githubusercontent.com/JamiKettunen/xbps-cache-prune/master/xbps-cache-prune.py \
+			-t 3 "${wget_progress_args[@]}" -qO "$pkgcache_dir"/prune.py
 	python3 "$pkgcache_dir"/prune.py -c "$pkgcache_dir" -n 2 -d false || :
 }
 teardown_extra_pkgs() {

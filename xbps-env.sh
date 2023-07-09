@@ -21,7 +21,7 @@ setup_xbps_static() {
 	cmd_exists xbps-uhelper && return 0
 	[ -e xbps-static ] || mkdir xbps-static
 
-	local checksums="$(wget "$mirror/static/sha256sums.txt" -t 3 -qO -)" checksum=""
+	local checksums="$($wget "$mirror/static/sha256sums.txt" -t 3 -qO -)" checksum=""
 	local xbps_tarball="xbps-static-latest.${host_arch}-musl.tar.xz"
 	local fetch=true
 
@@ -34,7 +34,7 @@ setup_xbps_static() {
 	if $fetch; then
 		log "Fetching latest static xbps binaries for $host_arch..."
 		mkdir -p "$tarball_dir"
-		if ! wget "$mirror/static/$xbps_tarball" -t 3 --show-progress -qO "$tarball_dir/$xbps_tarball"; then
+		if ! $wget "$mirror/static/$xbps_tarball" -t 3 "${wget_progress_args[@]}" -qO "$tarball_dir/$xbps_tarball"; then
 			rm "$tarball_dir/$xbps_tarball"
 			error "Download of $mirror/static/$xbps_tarball failed!"
 		fi
@@ -48,7 +48,7 @@ setup_xbps_static() {
 		tar xf "$tarball_dir/$xbps_tarball" -C xbps-static # unpack
 	fi
 
-	export PATH=$base_dir/xbps-static/usr/bin:$PATH
+	PATH=$base_dir/xbps-static/usr/bin:$PATH
 }
 setup_xbps_src_conf() {
 	local xbps_src_config="# as configured in Void Bootstrap's config.sh"
