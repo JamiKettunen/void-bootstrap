@@ -7,6 +7,7 @@ set -e
 SUPPORTED_ARCHES=(aarch64 armv6l armv7l x86_64 i686)
 SPECIAL_MOUNTS=(sys dev proc)
 DEF_MIRROR="https://repo-default.voidlinux.org"
+BINFMT_PROCFS="/proc/sys/fs/binfmt_misc"
 COLOR_GREEN="\e[32m"
 COLOR_BLUE="\e[36m"
 COLOR_RED="\e[91m"
@@ -184,6 +185,7 @@ check_deps() {
 	if [ "$qemu_arch" ]; then
 		cmd_exists qemu-$qemu_arch-static || cmd_exists qemu-$qemu_arch || \
 			missing_deps+=("(qemu-$qemu_arch-static|qemu-$qemu_arch)")
+		[[ "$backend" != "systemd-nspawn" && $(find $BINFMT_PROCFS/* 2>/dev/null | wc -l) -eq 0 ]] && runtime_deps+=(update-binfmts)
 	fi
 	[ ${#extra_build_pkgs[@]} -gt 0 ] && runtime_deps+=(git patch)
 
@@ -200,7 +202,7 @@ check_deps() {
 setup_binfmt() {
 	[ "$qemu_arch" ] || return 0
 
-	local binfmt_backend="binfmt-support" binfmt_procfs="/proc/sys/fs/binfmt_misc"
+	local binfmt_backend="binfmt_misc" binfmt_qemu
 	if [ "$backend" = "systemd-nspawn" ]; then
 		binfmt_backend="systemd-binfmt"
 		if ! systemctl -q is-active systemd-binfmt; then
@@ -210,9 +212,9 @@ setup_binfmt() {
 	fi
 
 	# TODO: detailed error reports on what might be wrong with binfmt_misc
-	binfmt_procfs=$(find $binfmt_procfs/* -exec grep -sl "interpreter.*qemu-$qemu_arch" {} + | head -n1)
-	if [ -z "$binfmt_procfs" ] || ! grep -q '^enabled$' $binfmt_procfs; then
-		error "Please re-check your '$binfmt_backend' setup (enabled qemu-$qemu_arch{,-static} interpreter wasn't detected)!"
+	binfmt_qemu=$(find $BINFMT_PROCFS/* -exec grep -sl "interpreter.*qemu-$qemu_arch" {} + | head -n1)
+	if [ -z "$binfmt_qemu" ] || ! grep -q '^enabled$' $binfmt_qemu; then
+		error "Please re-check your $binfmt_backend setup (enabled qemu-$qemu_arch{,-static} interpreter wasn't detected)!"
 	fi
 }
 # Fold while offsetting ouput lines after the first one by $1 spaces.
