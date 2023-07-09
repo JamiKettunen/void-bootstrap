@@ -59,7 +59,9 @@ cat <<'EOF' > mkrootfs.sh
 set -e
 cd "$(readlink -f "$(dirname "$0")")"
 if [ -d void-bootstrap ]; then
-	[ "$(find void-bootstrap/.git -maxdepth 0 -mmin +240)" ] && git -C void-bootstrap pull --ff-only
+	if [[ "$(git -C void-bootstrap remote -v 2>/dev/null)" && "$(find void-bootstrap/.git -maxdepth 0 -mmin +240)" ]]; then
+		git -C void-bootstrap pull --ff-only
+	fi
 else
 	git clone https://github.com/JamiKettunen/void-bootstrap
 fi
