@@ -412,7 +412,7 @@ users_conf_setup() {
 }
 prepare_bootstrap() {
 	if [ "$backend" = "systemd-nspawn" ]; then
-		chroot="systemd-nspawn -q --kill-signal=SIGTERM --timezone=off"
+		chroot="systemd-nspawn -q --console=pipe --timezone=off"
 	else
 		chroot_setup
 		chroot="chroot"
