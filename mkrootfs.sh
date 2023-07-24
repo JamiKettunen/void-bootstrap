@@ -516,7 +516,7 @@ apply_overlays() {
 	[ ${#overlays[@]} -gt 0 ] || return 0
 
 	#log "Applying ${#overlays[@]} enabled overlay(s)..."
-	local profile_overlays=($(echo "${profiles[@]/%/\/overlay}")) overlay_candidates overlay
+	local profile_overlays=($(echo "${profiles[@]/%/\/overlays}")) overlay_candidates overlay
 	for folder in ${overlays[*]}; do
 		overlay_candidates=($(find "${profile_overlays[@]}" -maxdepth 1 -name "$folder" -exec sh -c '[ $(ls -1 $1 2>/dev/null | wc -l) -gt 0 ] && echo $1' shell {} \;))
 		case ${#overlay_candidates[@]} in

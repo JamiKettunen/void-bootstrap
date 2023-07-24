@@ -162,7 +162,7 @@ enable_sv=()
 disable_sv=()
 
 # Overlay directories to deploy on the rootfs
-# See overlay/README.md
+# See overlays/README.md
 overlays=()
 
 # xbps-src options

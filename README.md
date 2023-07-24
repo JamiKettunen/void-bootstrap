@@ -73,12 +73,12 @@ EOF
 ln -s mkrootfs.sh deploy.sh
 ln -s mkrootfs.sh tethering.sh
 ```
-Afterwards feel free to [setup a `packages` structure](https://github.com/JamiKettunen/void-bootstrap/tree/master/packages#readme) or [add extra `overlays`](https://github.com/JamiKettunen/void-bootstrap/tree/master/overlay#readme) to this new repo.
+Afterwards feel free to [setup a `packages` structure](https://github.com/JamiKettunen/void-bootstrap/tree/master/packages#readme) or [add extra `overlays`](https://github.com/JamiKettunen/void-bootstrap/tree/master/overlays#readme) to this new repo.
 
 By the end your external repo layout could look like:
 ```
 external-void-bootstrap
-├── overlay
+├── overlays
 │   └── example
 │       └── deploy.sh
 ├── packages
