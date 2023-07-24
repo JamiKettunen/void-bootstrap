@@ -59,7 +59,10 @@ cat <<'EOF' > mkrootfs.sh
 set -e
 cd "$(readlink -f "$(dirname "$0")")"
 if [ -d void-bootstrap ]; then
-	if [[ "$(git -C void-bootstrap remote -v 2>/dev/null)" && "$(find void-bootstrap/.git -maxdepth 0 -mmin +240)" ]]; then
+	: ${VBS_PULL_THRESHOLD_MINS:=240}
+	if [[ $VBS_PULL_THRESHOLD_MINS -gt -1 && \
+	      "$(git -C void-bootstrap remote -v 2>/dev/null)" && \
+	      "$(find void-bootstrap/.git -maxdepth 0 -mmin +$VBS_PULL_THRESHOLD_MINS)" ]]; then
 		git -C void-bootstrap pull --ff-only
 	fi
 else
