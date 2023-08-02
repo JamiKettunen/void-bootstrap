@@ -164,6 +164,9 @@ config_prep() {
 	rootfs_dir="$work_dir/rootfs"
 	[ "$mirror" ] || mirror="$DEF_MIRROR"
 	[ "$img_compress" ] || img_compress="none"
+	if [[ "$img_size" != "0" && ! -c /dev/loop-control ]]; then
+		error "Cannot setup rootfs filesystem image due to missing host /dev/loop-control!"
+	fi
 	user_count=$(printf '%s\n' "${users[@]}" | grep -cv '^root$')
 	printf '%s\n' "${users[@]}" | grep -q '^root$' || users+=(root)
 	[[ $((${#extra_build_pkgs[@]}+${#extra_install_pkgs[@]})) -gt 0 ]] || build_extra_pkgs=false
