@@ -29,7 +29,7 @@ backend=""
 arch="aarch64"
 
 # Use musl as the standard C library instead of glibc? (true|false)
-musl=true
+musl=false
 
 # DNS nameservers to configure under rootfs /etc/resolv.conf
 # e.g. (1.1.1.1)
