@@ -202,14 +202,10 @@ nbd_prepare() {
 	fi
 }
 nbd_setup() {
-	local rootfs="$(readlink -f "$PWD/rootfs.img")"
-	sed -e "s/@NPROC@/$(nproc)/" -e "s|@ROOTFS@|$rootfs|" \
+	local rootfs="$(readlink -f "$PWD/rootfs.img")" authfile_line=""
+	[ -e nbd/allowed_clients ] && authfile_line="authfile = allowed_clients"
+	sed -e "s/@NPROC@/$(nproc)/" -e "s|@ROOTFS@|$rootfs|" -e "s/@AUTHFILE@/$authfile_line/" \
 		nbd/config.in > nbd/config
-	if [ -e nbd/allowed_clients ]; then
-		sed -e "s/@AUTHFILE@/authfile = allowed_clients/" -i nbd/config
-	else
-		sed -e "/@AUTHFILE@/d" -i nbd/config
-	fi
 
 	# TODO: e2fsck?
 	log "Resizing $(basename "$rootfs") to $resize_gb GiB..."
