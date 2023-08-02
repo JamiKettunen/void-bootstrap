@@ -212,7 +212,7 @@ setup_binfmt() {
 	fi
 
 	# TODO: detailed error reports on what might be wrong with binfmt_misc
-	binfmt_qemu=$(find $BINFMT_PROCFS/* -exec grep -sl "interpreter.*qemu-$qemu_arch" {} + | head -n1)
+	binfmt_qemu=$(find $BINFMT_PROCFS/* -exec grep -sl "interpreter.*qemu.*$qemu_arch" {} + | head -n1)
 	if [ -z "$binfmt_qemu" ] || ! grep -q '^enabled$' $binfmt_qemu; then
 		error "Please re-check your $binfmt_backend setup (enabled qemu-$qemu_arch{,-static} interpreter wasn't detected)!"
 	fi
