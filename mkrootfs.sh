@@ -170,7 +170,7 @@ config_prep() {
 	. xbps-env.sh
 }
 check_deps() {
-	local runtime_deps=($backend xz mkfs.ext4 $sudo) missing_deps=()
+	local runtime_deps=($backend xz mkfs.ext4 $sudo tar) missing_deps=()
 	[[ $EUID -ne 0 && -z "$sudo" ]] && missing_deps+=("(sudo|doas)")
 	if cmd_exists wget2; then
 		wget="wget2"
