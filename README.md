@@ -70,6 +70,7 @@ else
 fi
 void-bootstrap/"${0##*/}" -p "$PWD" "$@"
 EOF
+chmod +x mkrootfs.sh
 ln -s mkrootfs.sh deploy.sh
 ln -s mkrootfs.sh tethering.sh
 ```
