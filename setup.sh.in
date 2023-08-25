@@ -12,6 +12,7 @@ DEF_MIRROR="@DEF_MIRROR@"
 MIRROR="@MIRROR@"
 RM_PKGS="@RM_PKGS@"
 RM_FILES="@RM_FILES@"
+EXTRA_VOID_REPOS=(@EXTRA_VOID_REPOS@)
 BASE_PKGS="@BASE_PKGS@"
 EXTRA_PKGS="@EXTRA_PKGS@"
 ENABLE_SV="@ENABLE_SV@"
@@ -84,6 +85,11 @@ stage1_setup() {
 }
 pkgs_setup() {
 	[ "$BASE_PKGS$EXTRA_PKGS" ] || return
+
+	if [ ${#EXTRA_VOID_REPOS[@]} -gt 0 ]; then
+		log "Enabling ${#EXTRA_VOID_REPOS[@]} extra Void repositories (${EXTRA_VOID_REPOS[*]})..."
+		xbps-install -Sy ${EXTRA_VOID_REPOS[*]/#/void-repo-} || error "Failed to enable ${#EXTRA_VOID_REPOS[@]} extra Void repositories (${EXTRA_VOID_REPOS[*]})!"
+	fi
 
 	log "Installing additional configured packages..."
 	xbps-install -Sy $BASE_PKGS $EXTRA_PKGS || error "Failed to install packages '$BASE_PKGS $EXTRA_PKGS'!"

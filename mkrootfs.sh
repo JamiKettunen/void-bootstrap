@@ -438,6 +438,7 @@ prepare_bootstrap() {
 		-e "s|@MIRROR@|$mirror|g" \
 		-e "s|@RM_PKGS@|${rm_pkgs[*]}|g" \
 		-e "s|@RM_FILES@|$rm_files|g" \
+		-e "s|@EXTRA_VOID_REPOS@|${extra_void_repos[*]}|g" \
 		-e "s|@BASE_PKGS@|${base_pkgs[*]}|g" \
 		-e "s|@EXTRA_PKGS@|${extra_install_pkgs[*]}|g" \
 		-e "s|@ENABLE_SV@|${enable_sv[*]}|g" \
