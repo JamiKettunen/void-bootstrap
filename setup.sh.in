@@ -36,7 +36,14 @@ error() { echo -e "${COLOR_RED}ERROR: $1${COLOR_RESET}" 1>&2; exit 1; }
 log() { echo -e "${COLOR_GREEN}(rootfs) ${COLOR_BLUE}>>${COLOR_RESET} $1"; }
 enable_sv() { local svd; for sv in $@; do svd=/etc/sv/$sv; [ -d $svd ] && ln -s $svd /etc/runit/runsvdir/default/ || error "Service '$sv' doesn't exist!"; done; }
 disable_sv() { local svd; for sv in $@; do svd=/etc/sv/$sv; [ -d $svd ] && touch $svd/down || error "Service '$sv' doesn't exist!"; done; }
-runas() { sudo -u $1 -i bash -c "$2"; }
+runas() {
+	if [ -t 0 ]; then
+		sudo -u $1 -i bash -c "$2"
+	else
+		# read possibly multi-line commands from stdin
+		sudo -u $1 -i bash
+	fi
+}
 cmd_exists() { command -v $1 >/dev/null; }
 mirror_setup() {
 	[ "$MIRROR" = "$DEF_MIRROR" ] && return
