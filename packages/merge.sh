@@ -62,7 +62,7 @@ merge_patches() {
 	echo "Applying $patches_count custom patches..."
 	pushd "$void_packages" > /dev/null
 	while IFS="" read filepath; do
-		if ! patch -p1 --forward < "$filepath"; then
+		if ! patch -p1 --forward -s < "$filepath"; then
 			echo "ERROR: Failed to apply $(basename "$filepath")!"
 			exit 1
 		fi
