@@ -81,7 +81,7 @@ hostname="voidlinux"
 # Void Linux mirror to use for all downloads
 # https://docs.voidlinux.org/xbps/repositories/mirrors/index.html
 # NOTE: "" = DEF_MIRROR as defined in mkrootfs.sh
-mirror="https://alpha.de.repo.voidlinux.org"
+mirror=""
 
 # Rootfs filename format:
 # "%a" -> architecture (e.g. "aarch64" or "aarch64-musl")
