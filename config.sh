@@ -10,7 +10,7 @@ sudo_timer=false
 
 # Void Linux release tarballs to target
 # e.g. "current" or "20210316"
-# https://alpha.de.repo.voidlinux.org/live
+# https://repo-default.voidlinux.org/live
 release="20230628"
 
 # Backend to use for executing scripts and commands on the rootfs; supported choices include:
