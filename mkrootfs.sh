@@ -654,7 +654,9 @@ create_image() {
 
 	log "All done! Final image size: $(du -h "$rootfs_img" | awk '{print $1}')"
 }
+reset_dirstack() { pushd -0 >/dev/null && dirs -c; }
 cleanup() {
+	reset_dirstack
 	teardown_pkgcache
 	teardown_extra_pkgs
 	if ${custom_packages_setup:-false}; then
