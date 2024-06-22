@@ -2,7 +2,22 @@
 Customize & create Void Linux rootfs images.
 
 ## Supported architectures
-`aarch64`, `armv6l`, `armv7l`, `x86_64` and `i686`
+Binary repositories for both glibc & musl:
+- `aarch64`
+- `armv6l`
+- `armv7l`
+- `x86_64`
+
+Binary repositories for glibc only:
+- `i686`
+
+No binary repositories with existing `xbps-src` build targets (more or less unsupported here too):
+- `i686-musl`
+- `armv5te{,l}{,-musl}`
+- `armv{6,7}hf{,-musl}`
+- `mips{,hf,el,elhf}-musl`
+- `ppc{,le,64,64le}{,-musl}`
+- `riscv64{,-musl}`
 
 ## Building
 Create a `config.custom.sh`, in it tweak options defined in [`config.sh`](config.sh) as you please & simply run the [`mkrootfs.sh`](mkrootfs.sh) script:
