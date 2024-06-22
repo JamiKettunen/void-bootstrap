@@ -5,8 +5,8 @@ update_void_packages_branch() {
 	fi
 }
 xbps_config_prep() {
-	masterdir="masterdir$musl_suffix"
 	host_target="${host_arch}${musl_suffix}"
+	masterdir="masterdir-$host_target"
 	[ "$host_arch" != "$arch" ] && cross_target="${arch}${musl_suffix}" #|| cross_target=""
 	build_target="${cross_target:-$host_target}"
 	[ "$build_chroot_preserve" ] || build_chroot_preserve="none"
@@ -227,15 +227,15 @@ build_packages() {
 			$sudo rm -rf $masterdir
 		elif [ "$build_chroot_preserve" = "ccache" ]; then
 			log "Cleaning existing build chroot (without removing ccache)..."
-			./xbps-src -m $masterdir zap
+			./xbps-src -A $host_target zap
 		else # all
 			log "Updating existing build chroot..."
-			./xbps-src -m $masterdir bootstrap-update
+			./xbps-src -A $host_target bootstrap-update
 		fi
 	fi
 	if [ ! -e $masterdir/bin/sh ]; then
 		log "Creating new $host_target build chroot..."
-		./xbps-src -m $masterdir binary-bootstrap $host_target
+		./xbps-src -A $host_target binary-bootstrap
 	fi
 
 	setup_xbps_src_conf
@@ -245,10 +245,10 @@ build_packages() {
 	for pkg in ${pkgs_build[@]}; do
 		if [ "$cross_target" ]; then
 			log "Cross-compiling extra package '$pkg' for $cross_target..."
-			./xbps-src -m $masterdir -a $cross_target pkg $pkg
+			./xbps-src -A $host_target -a $cross_target pkg $pkg
 		else
 			log "Compiling extra package '$pkg' for $host_target..."
-			./xbps-src -m $masterdir pkg $pkg
+			./xbps-src -A $host_target pkg $pkg
 		fi
 	done
 
