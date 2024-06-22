@@ -545,7 +545,7 @@ apply_overlays() {
 		fi
 		if [ -f "$rootfs_dir"/deploy.sh ]; then
 			if [ "$(grep '^#!.*bash$' "$rootfs_dir"/deploy.sh)" ]; then
-				printf '%s\n%s\n%s\n%s\n' '1a' '. /setup.sh' '.' 'wq' | $sudo ed -s "$rootfs_dir"/deploy.sh
+				$sudo sed -ie '1 a . /setup.sh' "$rootfs_dir"/deploy.sh
 			fi
 			$sudo chmod +x "$rootfs_dir"/deploy.sh
 			run_on_rootfs /deploy.sh

@@ -35,7 +35,7 @@ merge_shlibs() {
 		pkgfull="${shlib##* }" # e.g. "wlroots-legacy-0.12.0_1"
 		pkgname="${pkgfull%-*}" # e.g. "wlroots-legacy"
 		if ! grep -Eq "^$soname $pkgname-[0-9+]" "$void_shlibs"; then
-			echo "$(grep -v "^$soname\ " "$void_shlibs")" > "$void_shlibs"
+			sed -ie "/^$soname\ /d" "$void_shlibs"
 			echo "$shlib" >> "$void_shlibs"
 		fi
 	done < <(echo "$custom_shlibs_lines")
@@ -49,7 +49,7 @@ merge_virtuals() {
 	while IFS="" read virtual; do
 		vpkgname="${virtual% *}" # e.g. "java-environment"
 		if grep -Eq "^$vpkgname " "$void_virtuals"; then
-			echo "$(grep -v "^$vpkgname\ " "$void_virtuals")" > "$void_virtuals"
+			sed -ie "/^$vpkgname\ /d" "$void_virtuals"
 		fi
 		echo "$virtual" >> "$void_virtuals"
 	done < <(echo "$custom_virtuals_lines")
