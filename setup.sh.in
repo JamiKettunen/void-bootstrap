@@ -84,7 +84,12 @@ base_setup() {
 
 	log "Finishing base system setup..."
 	xbps-install base-system -y
-	xbps-remove -y base-voidstrap
+	local base_pkg
+	for base_pkg in base-{container-full,voidstrap}; do
+		if xbps-query $base_pkg >/dev/null; then
+			xbps-remove -y $base_pkg
+		fi
+	done
 }
 stage1_setup() {
 	mirror_setup
@@ -119,7 +124,7 @@ sv_setup() {
 }
 user_setup() {
 	log "Performing user setup..."
-	local pw_conf=""
+	local line pw_conf=""
 	while IFS="" read line; do
 		local fields=() user="" pw="$USERS_PW_DEFAULT" id="" groups="$USERS_GROUPS_COMMON" \
 			shell="$USERS_SHELL_DEFAULT" fullname=""
